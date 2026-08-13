@@ -41,6 +41,7 @@ temp/
 *.sqlite3
 *.db
 postgres-data/
+minio-data/
 
 # OS and editor
 .DS_Store

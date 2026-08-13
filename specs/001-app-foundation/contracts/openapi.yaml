@@ -1,0 +1,75 @@
+openapi: 3.0.3
+info:
+  title: FlyAccounts
+  description: >
+    Single source of truth for the App Foundation working-and-connected check.
+    The backend MUST implement this document. The frontend MUST generate its
+    client from this document and MUST NOT use unofficial endpoints or a
+    hand-written parallel status shape. FastAPI auto-generated OpenAPI is not
+    the contract.
+  version: 1.0.0
+servers:
+  - url: /v1
+    description: Versioned API prefix
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      summary: Working-and-connected check
+      description: >
+        Returns whether this backend handled the request and whether PostgreSQL
+        and S3-compatible storage are reachable. HTTP 200 means the frontend
+        reached the backend (connected successfully), even if database or
+        storage is unavailable. If this operation cannot be completed because
+        the backend is unreachable, the client MUST treat the application as
+        not connected and MUST NOT show a connected-success message.
+      tags:
+        - Status
+      responses:
+        "200":
+          description: Backend handled the request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+              examples:
+                allOk:
+                  summary: Backend, database, and storage reachable
+                  value:
+                    service: ok
+                    database: ok
+                    storage: ok
+                databaseUnavailable:
+                  summary: Backend reachable; PostgreSQL not reachable
+                  value:
+                    service: ok
+                    database: unavailable
+                    storage: ok
+                storageUnavailable:
+                  summary: Backend reachable; storage not reachable
+                  value:
+                    service: ok
+                    database: ok
+                    storage: unavailable
+components:
+  schemas:
+    StatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - service
+        - database
+        - storage
+      properties:
+        service:
+          type: string
+          enum: [ok]
+          description: Backend process handled GET /v1/status.
+        database:
+          type: string
+          enum: [ok, unavailable]
+          description: Result of a PostgreSQL reachability check (SELECT 1).
+        storage:
+          type: string
+          enum: [ok, unavailable]
+          description: Result of an S3-compatible reachability check (HeadBucket).
