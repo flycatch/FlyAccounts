@@ -1,0 +1,38 @@
+:root {
+  color: #1a1a1a;
+  background: #f6f7f9;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.status-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.status-page h1,
+.status-page p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .status-page {
+    padding: 2.5rem 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .status-page {
+    padding: 3rem 2rem;
+  }
+}

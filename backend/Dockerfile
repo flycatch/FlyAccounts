@@ -1,0 +1,22 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+ENV PYTHONPATH=/app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml /app/pyproject.toml
+COPY app /app/app
+COPY alembic /app/alembic
+COPY alembic.ini /app/alembic.ini
+COPY contracts /app/contracts
+COPY entrypoint.sh /app/entrypoint.sh
+
+RUN pip install --no-cache-dir . \
+    && chmod +x /app/entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/entrypoint.sh"]
