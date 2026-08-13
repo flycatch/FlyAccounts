@@ -1,0 +1,54 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+.vite/
+.turbo/
+.npm/
+.pnpm-store/
+
+# Logs and local runtime
+*.log
+logs/
+tmp/
+temp/
+*.pid
+
+# Local data stores
+*.sqlite3
+*.db
+postgres-data/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+
+# Test and coverage artifacts
+coverage/
+.nyc_output/
