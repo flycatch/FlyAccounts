@@ -2,8 +2,13 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.config import get_settings
+from app.core.security import issue_access_token
+from app.db.session import get_engine, reset_engine
 from app.main import app
+from tests.conftest import assign_role, create_user, role_by_name
 
 
 pytestmark = pytest.mark.skipif(
@@ -13,8 +18,20 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_status_against_compose_stack():
+    get_settings.cache_clear()
+    reset_engine()
+    factory = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
+    db: Session = factory()
+    try:
+        user = create_user(db, upn="stack-status@contoso.com")
+        assign_role(db, user, role_by_name(db, "HR User"))
+        db.commit()
+        token = issue_access_token(user.id)
+    finally:
+        db.close()
+
     client = TestClient(app)
-    response = client.get("/v1/status")
+    response = client.get("/v1/status", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     body = response.json()
     assert body["service"] == "ok"

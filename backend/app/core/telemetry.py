@@ -6,6 +6,7 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProces
 
 
 def setup_telemetry(app) -> None:
+    """Trace every FastAPI request, including /v1/auth, /v1/me, /v1/people, and /v1/status."""
     resource = Resource.create({"service.name": "flyaccounts-backend"})
     provider = TracerProvider(resource=resource)
     provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))

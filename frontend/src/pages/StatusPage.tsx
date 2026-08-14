@@ -45,8 +45,8 @@ export function StatusPage() {
   }, []);
 
   return (
-    <main className="status-page">
-      <h1>FlyAccounts</h1>
+    <section className="status-page">
+      <h2>Connection</h2>
       <p>The application is working.</p>
       {connection === "loading" ? <p>Checking connection…</p> : null}
       {connection === "connected" ? (
@@ -59,6 +59,6 @@ export function StatusPage() {
       {connection === "not_connected" ? (
         <p>The application is not connected.</p>
       ) : null}
-    </main>
+    </section>
   );
 }
