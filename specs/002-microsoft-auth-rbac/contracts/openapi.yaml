@@ -1,0 +1,652 @@
+openapi: 3.0.3
+info:
+  title: FlyAccounts
+  description: >
+    Single source of truth for Microsoft authentication, session tokens,
+    combined-permission landing, and role assignment. The backend MUST implement
+    this document. The frontend MUST generate its client from this document and
+    MUST NOT use unofficial endpoints or hand-written parallel auth or landing
+    shapes. FastAPI auto-generated OpenAPI is not the contract.
+
+    Breaking change from foundation 1.0.0: GET /v1/status requires a Bearer
+    access JWT and at least one assigned role.
+  version: 2.0.0
+servers:
+  - url: /v1
+    description: Versioned API prefix
+tags:
+  - name: Auth
+  - name: Me
+  - name: Status
+  - name: AccessAdministration
+paths:
+  /auth/microsoft:
+    post:
+      operationId: exchangeMicrosoftToken
+      summary: Exchange a Microsoft ID token for FlyAccounts tokens
+      description: >
+        Validates the Microsoft ID token for the configured organizational
+        tenant and SPA client id. Personal accounts and unknown directories
+        are rejected and MUST NOT create a user. On success, upserts the user,
+        bootstraps the initial admin assignment when the work email matches
+        environment configuration, and returns an access JWT plus a refresh
+        token.
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MicrosoftTokenRequest"
+      responses:
+        "200":
+          description: Signed in. Store accessToken and refreshToken in localStorage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          description: Invalid, expired, personal, or wrong-tenant Microsoft token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidToken:
+                  value:
+                    code: invalid_token
+                    message: Microsoft sign-in could not be verified.
+                personalAccount:
+                  value:
+                    code: personal_account
+                    message: Personal Microsoft accounts are not accepted.
+                unknownTenant:
+                  value:
+                    code: unknown_tenant
+                    message: This Microsoft directory is not accepted.
+
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Rotate refresh token and issue a new access JWT
+      description: >
+        Redeems a valid refresh token, revokes it, and returns a new pair.
+        Reuse of a rotated or revoked token revokes the token family and
+        returns 401.
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: New access and refresh tokens. Replace both in localStorage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          description: Unknown, expired, revoked, or reused refresh token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: invalid_token
+                message: Refresh token is not valid.
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Sign out
+      description: >
+        Revokes the refresh token (and its family) associated with this
+        session. The client MUST then remove tokens from localStorage.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "204":
+          description: Signed out.
+        "401":
+          description: Missing or invalid access JWT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /me:
+    get:
+      operationId: getMe
+      summary: Current person, roles, combined permissions, and landing
+      description: >
+        Allowed for any signed-in person. Combined permissions are the union
+        of permissions from all assigned roles, loaded from the database for
+        this request. landing.sensitiveFinancialFields is present only when
+        view_sensitive_financial_fields is in that set. landing.sections
+        includes only sections the combined set allows.
+      tags:
+        - Me
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current session identity and landing payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+              examples:
+                pending:
+                  summary: Signed in with no roles
+                  value:
+                    id: "00000000-0000-0000-0000-000000000001"
+                    displayName: Alex Example
+                    upn: alex@contoso.com
+                    roles: []
+                    permissions: []
+                    landing:
+                      accessState: pending
+                      sections: []
+                authorized:
+                  summary: Combined landing with sensitive fields
+                  value:
+                    id: "00000000-0000-0000-0000-000000000002"
+                    displayName: Alex Example
+                    upn: alex@contoso.com
+                    roles:
+                      - id: "00000000-0000-0000-0000-0000000000a1"
+                        name: Finance User
+                      - id: "00000000-0000-0000-0000-0000000000a2"
+                        name: HR User
+                    permissions:
+                      - view_sensitive_financial_fields
+                      - finance_landing
+                      - hr_landing
+                    landing:
+                      accessState: authorized
+                      sensitiveFinancialFields:
+                        cost: "1000.00"
+                        margin: "250.00"
+                      sections:
+                        - code: finance_landing
+                          title: Finance
+                          body: Content allowed by finance_landing.
+                        - code: hr_landing
+                          title: HR
+                          body: Content allowed by hr_landing.
+        "401":
+          description: Missing or invalid access JWT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /status:
+    get:
+      operationId: getStatus
+      summary: Working-and-connected check
+      description: >
+        Same StatusResponse as foundation, but not public. HTTP 200 means the
+        frontend reached the backend (connected successfully), even if database
+        or storage is unavailable. Requires a valid access JWT and at least one
+        assigned role. Unsigned callers receive 401. Signed-in callers with no
+        roles receive 403.
+      tags:
+        - Status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Backend handled the request for an authorized person.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+              examples:
+                allOk:
+                  summary: Backend, database, and storage reachable
+                  value:
+                    service: ok
+                    database: ok
+                    storage: ok
+        "401":
+          description: Not signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Signed in with no roles (pending access).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: pending_access
+                message: A recognized role is required.
+
+  /people:
+    get:
+      operationId: listPeople
+      summary: People who have signed in with Microsoft
+      description: >
+        Requires access_administration in the caller's combined permissions.
+        Returns people who already have a User row (they have signed in).
+        Inviting people who have never signed in is out of scope.
+      tags:
+        - AccessAdministration
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Signed-in people and their assigned roles.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PeopleResponse"
+        "401":
+          description: Not signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Combined permissions do not include access_administration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /roles:
+    get:
+      operationId: listRoles
+      summary: Existing roles that can be assigned
+      description: >
+        Requires access_administration. Returns seeded (and any later) roles
+        as data. This operation does not create or edit roles.
+      tags:
+        - AccessAdministration
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Assignable roles.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolesResponse"
+        "401":
+          description: Not signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Combined permissions do not include access_administration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /people/{userId}/roles:
+    post:
+      operationId: assignRole
+      summary: Assign an existing role
+      description: >
+        Adds the role without replacing roles the person already has.
+        Duplicate assignment is refused. Requires access_administration.
+      tags:
+        - AccessAdministration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignRoleRequest"
+      responses:
+        "200":
+          description: Person after the assignment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "401":
+          description: Not signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Combined permissions do not include access_administration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Person or role not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The person already has this role.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: duplicate_assignment
+                message: That role is already assigned.
+
+  /people/{userId}/roles/{roleId}:
+    delete:
+      operationId: revokeRole
+      summary: Revoke one assigned role
+      description: >
+        Removes one assignment. Remaining roles stay. If none remain, the
+        person has no roles (pending access on their next use). Refused when
+        the change would leave zero people whose combined permissions include
+        access_administration.
+      tags:
+        - AccessAdministration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/RoleId"
+      responses:
+        "200":
+          description: Person after the revoke.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+        "401":
+          description: Not signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Combined permissions do not include access_administration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Person, role, or assignment not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Would remove the last access-administration grant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: last_admin_required
+                message: At least one person with access administration must remain.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: FlyAccounts access JWT from POST /auth/microsoft or POST /auth/refresh.
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - invalid_token
+            - personal_account
+            - unknown_tenant
+            - unauthorized
+            - forbidden
+            - pending_access
+            - not_found
+            - duplicate_assignment
+            - last_admin_required
+        message:
+          type: string
+    MicrosoftTokenRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - idToken
+      properties:
+        idToken:
+          type: string
+          description: Microsoft ID token from MSAL for the configured tenant.
+    RefreshTokenRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - accessToken
+        - refreshToken
+        - tokenType
+        - expiresIn
+        - user
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived JWT; store in localStorage; send as Bearer.
+        refreshToken:
+          type: string
+          description: Opaque token; store in localStorage; send to /auth/refresh.
+        tokenType:
+          type: string
+          enum: [bearer]
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: Access token lifetime in seconds.
+        user:
+          $ref: "#/components/schemas/MeResponse"
+    RoleSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+    LandingSection:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - title
+        - body
+      properties:
+        code:
+          type: string
+          description: Permission code that allowed this section.
+        title:
+          type: string
+        body:
+          type: string
+    SensitiveFinancialFields:
+      type: object
+      additionalProperties: false
+      required:
+        - cost
+        - margin
+      properties:
+        cost:
+          type: string
+          description: Demo cost shown only when permitted. Decimal string; not a posted document.
+        margin:
+          type: string
+          description: Demo margin shown only when permitted. Decimal string; not a posted document.
+    Landing:
+      type: object
+      additionalProperties: false
+      required:
+        - accessState
+        - sections
+      properties:
+        accessState:
+          type: string
+          enum: [pending, authorized]
+        sensitiveFinancialFields:
+          $ref: "#/components/schemas/SensitiveFinancialFields"
+          description: Omitted when view_sensitive_financial_fields is not in the combined set.
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/LandingSection"
+    MeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - displayName
+        - upn
+        - roles
+        - permissions
+        - landing
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        upn:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleSummary"
+        permissions:
+          type: array
+          items:
+            type: string
+          description: Combined permission codes for this request.
+        landing:
+          $ref: "#/components/schemas/Landing"
+    Person:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - displayName
+        - upn
+        - roles
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        upn:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleSummary"
+    PeopleResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - people
+      properties:
+        people:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"
+    RolesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - roles
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleSummary"
+    AssignRoleRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - roleId
+      properties:
+        roleId:
+          type: string
+          format: uuid
+    StatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - service
+        - database
+        - storage
+      properties:
+        service:
+          type: string
+          enum: [ok]
+          description: Backend process handled GET /v1/status.
+        database:
+          type: string
+          enum: [ok, unavailable]
+          description: Result of a PostgreSQL reachability check (SELECT 1).
+        storage:
+          type: string
+          enum: [ok, unavailable]
+          description: Result of an S3-compatible reachability check (HeadBucket).
