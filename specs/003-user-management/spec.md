@@ -219,7 +219,7 @@ A person with access-administration cancels an invite that has not been used to 
 - **User**: A person identified by organizational work email and, after sign-in, by their organizational Microsoft account. They may be invited before first sign-in, or they may enter through the organization without an invite. Key attributes: work email, display name after sign-in, whether they have signed in, how they entered (invite or organization), assigned roles.
 - **Invite**: An optional pre-provision record for an organizational email that has not signed in yet. Created by a person with access-administration. May include zero or more roles. Cancelled invites are removed from the list and do not block later organization-based sign-in.
 - **Role**: A named grouping of permissions. Created and edited in User Management. Display name is a label; access follows attached permissions, not the name.
-- **Permission**: An existing named capability that can be attached to roles (including access-administration and view sensitive financial fields). This feature does not create or edit permission types.
+- **Permission**: An existing named capability that can be attached to roles (including access-administration and view sensitive financial fields). Capabilities are module-level for this feature; later modules may add more specific codes on the same model. This feature does not create or edit permission types.
 - **Role Assignment**: The link between a User and one or more Roles. Created at invite time or later. The same role is not assigned twice to the same person.
 - **Role Permission**: The link between a Role and one or more existing Permissions. The same permission is not attached twice to the same role.
 - **Settings**: The application area that contains User Management (people and roles together).
@@ -251,14 +251,14 @@ A person with access-administration cancels an invite that has not been used to 
 - Invite does not require the person to have signed in first.
 - Only organizational Microsoft work or school accounts are accepted. Personal Microsoft accounts remain out of scope.
 - The designated initial Microsoft identity from the previous authentication feature may sign in without a prior invite so the first person can invite others. That identity is supplied by environment configuration, not project source. Other organizational accounts may also sign in without an invite.
-- Permissions already exist as named capabilities (including access-administration and view sensitive financial fields). This feature attaches those existing permissions to roles. New permission types for later modules are added as data by those modules, not by a permission-type editor here.
+- Permissions already exist as named capabilities (including access-administration and view sensitive financial fields). For this feature they are **module-level** (one grant per module, plus the existing sensitive-fields capability under finance). This feature attaches those existing permissions to roles. Later modules MAY add more specific permission codes as data on the same model; they MUST NOT introduce a second permission system. A module-level grant does not imply those later codes. New permission types are not added by a permission-type editor here.
 - Access-administration in this feature is application-wide. Legal-entity switching (Entity A, Entity B, Entity C, or All Entities Consolidated) is specified in a later feature.
 - Standing field policy: cost, margin, and other sensitive financial fields are visible only when the combined permissions include the permission to view sensitive financial fields.
 - Deleting a role that is still assigned is refused. The role must have no assignments before it can be deleted.
 - This feature adds invite as an additional entry path. It does not revoke the previous authentication feature’s rule that an accepted organizational account may sign in and wait on pending access. Pending access is for any signed-in person with no roles.
 - Cancel and remove clear the unused invite or the listed person. They do not create a permanent block. A later organization-based sign-in is allowed.
 - The combined landing remains the authorized home after sign-in when the person has roles. User Management is reached from Settings, not as a replacement for that landing.
-- Later modules MUST honor combined permissions for every feature and action they add. Those modules are not built in this feature.
+- Later modules MUST honor combined permissions for every feature and action they add. Those modules are not built in this feature. When they need finer control, they add new permission codes as data (same model) rather than a separate ACL.
 - Delivery remains one backend and one frontend bound by a published contract, per the project constitution.
 
 ## Out of Scope
