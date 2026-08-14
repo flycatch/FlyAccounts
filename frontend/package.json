@@ -8,9 +8,10 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "generate:api": "openapi-typescript ../specs/001-app-foundation/contracts/openapi.yaml -o src/api/schema.d.ts"
+    "generate:api": "openapi-typescript ../specs/002-microsoft-auth-rbac/contracts/openapi.yaml -o src/api/schema.d.ts"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.15.0",
     "openapi-fetch": "^0.13.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

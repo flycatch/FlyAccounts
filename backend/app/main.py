@@ -5,8 +5,12 @@ import yaml
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import router as auth_router
+from app.api.me import router as me_router
+from app.api.people import router as people_router
 from app.api.status import router as status_router
 from app.core.config import get_settings
+from app.core.errors import ApiError, api_error_handler
 from app.core.telemetry import setup_telemetry
 from app.storage.s3 import ensure_bucket
 
@@ -18,7 +22,7 @@ def _committed_openapi() -> dict:
         Path(__file__).resolve().parents[1] / "contracts" / "openapi.yaml",
         Path(__file__).resolve().parents[2]
         / "specs"
-        / "001-app-foundation"
+        / "002-microsoft-auth-rbac"
         / "contracts"
         / "openapi.yaml",
     ]
@@ -39,15 +43,19 @@ async def lifespan(_application: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    application = FastAPI(title="FlyAccounts", version="1.0.0", lifespan=lifespan)
+    application = FastAPI(title="FlyAccounts", version="2.0.0", lifespan=lifespan)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
         allow_credentials=False,
-        allow_methods=["GET"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["*"],
     )
     application.include_router(status_router, prefix="/v1")
+    application.include_router(auth_router, prefix="/v1")
+    application.include_router(me_router, prefix="/v1")
+    application.include_router(people_router, prefix="/v1")
+    application.add_exception_handler(ApiError, api_error_handler)
     setup_telemetry(application)
 
     committed = _committed_openapi()

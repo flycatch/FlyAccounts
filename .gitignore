@@ -47,6 +47,8 @@ minio-data/
 .DS_Store
 Thumbs.db
 .idea/
+.vscode/
+*.tmp
 *.swp
 *.swo
 

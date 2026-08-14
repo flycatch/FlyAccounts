@@ -4,6 +4,86 @@
  */
 
 export interface paths {
+    "/auth/microsoft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a Microsoft ID token for FlyAccounts tokens
+         * @description Validates the Microsoft ID token for the configured organizational tenant and SPA client id. Personal accounts and unknown directories are rejected and MUST NOT create a user. On success, upserts the user, bootstraps the initial admin assignment when the work email matches environment configuration, and returns an access JWT plus a refresh token.
+         */
+        post: operations["exchangeMicrosoftToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate refresh token and issue a new access JWT
+         * @description Redeems a valid refresh token, revokes it, and returns a new pair. Reuse of a rotated or revoked token revokes the token family and returns 401.
+         */
+        post: operations["refreshSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out
+         * @description Revokes the refresh token (and its family) associated with this session. The client MUST then remove tokens from localStorage.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current person, roles, combined permissions, and landing
+         * @description Allowed for any signed-in person. Combined permissions are the union of permissions from all assigned roles, loaded from the database for this request. landing.sensitiveFinancialFields is present only when view_sensitive_financial_fields is in that set. landing.sections includes only sections the combined set allows.
+         */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/status": {
         parameters: {
             query?: never;
@@ -13,7 +93,7 @@ export interface paths {
         };
         /**
          * Working-and-connected check
-         * @description Returns whether this backend handled the request and whether PostgreSQL and S3-compatible storage are reachable. HTTP 200 means the frontend reached the backend (connected successfully), even if database or storage is unavailable. If this operation cannot be completed because the backend is unreachable, the client MUST treat the application as not connected and MUST NOT show a connected-success message.
+         * @description Same StatusResponse as foundation, but not public. HTTP 200 means the frontend reached the backend (connected successfully), even if database or storage is unavailable. Requires a valid access JWT and at least one assigned role. Unsigned callers receive 401. Signed-in callers with no roles receive 403.
          */
         get: operations["getStatus"];
         put?: never;
@@ -24,10 +104,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * People who have signed in with Microsoft
+         * @description Requires access_administration in the caller's combined permissions. Returns people who already have a User row (they have signed in). Inviting people who have never signed in is out of scope.
+         */
+        get: operations["listPeople"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Existing roles that can be assigned
+         * @description Requires access_administration. Returns seeded (and any later) roles as data. This operation does not create or edit roles.
+         */
+        get: operations["listRoles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{userId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign an existing role
+         * @description Adds the role without replacing roles the person already has. Duplicate assignment is refused. Requires access_administration.
+         */
+        post: operations["assignRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{userId}/roles/{roleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke one assigned role
+         * @description Removes one assignment. Remaining roles stay. If none remain, the person has no roles (pending access on their next use). Refused when the change would leave zero people whose combined permissions include access_administration.
+         */
+        delete: operations["revokeRole"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ErrorResponse: {
+            /** @enum {string} */
+            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required";
+            message: string;
+        };
+        MicrosoftTokenRequest: {
+            /** @description Microsoft ID token from MSAL for the configured tenant. */
+            idToken: string;
+        };
+        RefreshTokenRequest: {
+            refreshToken: string;
+        };
+        TokenResponse: {
+            /** @description Short-lived JWT; store in localStorage; send as Bearer. */
+            accessToken: string;
+            /** @description Opaque token; store in localStorage; send to /auth/refresh. */
+            refreshToken: string;
+            /** @enum {string} */
+            tokenType: "bearer";
+            /** @description Access token lifetime in seconds. */
+            expiresIn: number;
+            user: components["schemas"]["MeResponse"];
+        };
+        RoleSummary: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string;
+        };
+        LandingSection: {
+            /** @description Permission code that allowed this section. */
+            code: string;
+            title: string;
+            body: string;
+        };
+        SensitiveFinancialFields: {
+            /** @description Demo cost shown only when permitted. Decimal string; not a posted document. */
+            cost: string;
+            /** @description Demo margin shown only when permitted. Decimal string; not a posted document. */
+            margin: string;
+        };
+        Landing: {
+            /** @enum {string} */
+            accessState: "pending" | "authorized";
+            /** @description Omitted when view_sensitive_financial_fields is not in the combined set. */
+            sensitiveFinancialFields?: components["schemas"]["SensitiveFinancialFields"];
+            sections: components["schemas"]["LandingSection"][];
+        };
+        MeResponse: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            upn: string;
+            roles: components["schemas"]["RoleSummary"][];
+            /** @description Combined permission codes for this request. */
+            permissions: string[];
+            landing: components["schemas"]["Landing"];
+        };
+        Person: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            upn: string;
+            roles: components["schemas"]["RoleSummary"][];
+        };
+        PeopleResponse: {
+            people: components["schemas"]["Person"][];
+        };
+        RolesResponse: {
+            roles: components["schemas"]["RoleSummary"][];
+        };
+        AssignRoleRequest: {
+            /** Format: uuid */
+            roleId: string;
+        };
         StatusResponse: {
             /**
              * @description Backend process handled GET /v1/status.
@@ -47,13 +282,148 @@ export interface components {
         };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        UserId: string;
+        RoleId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    exchangeMicrosoftToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MicrosoftTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in. Store accessToken and refreshToken in localStorage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Invalid, expired, personal, or wrong-tenant Microsoft token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description New access and refresh tokens. Replace both in localStorage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Unknown, expired, revoked, or reused refresh token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "invalid_token",
+                     *       "message": "Refresh token is not valid."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed out. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid access JWT. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current session identity and landing payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Missing or invalid access JWT. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getStatus: {
         parameters: {
             query?: never;
@@ -63,13 +433,246 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Backend handled the request. */
+            /** @description Backend handled the request for an authorized person. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StatusResponse"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Signed in with no roles (pending access). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "pending_access",
+                     *       "message": "A recognized role is required."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listPeople: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed-in people and their assigned roles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeopleResponse"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include access_administration. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Assignable roles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RolesResponse"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include access_administration. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    assignRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Person after the assignment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Person"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include access_administration. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Person or role not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The person already has this role. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "duplicate_assignment",
+                     *       "message": "That role is already assigned."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revokeRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+                roleId: components["parameters"]["RoleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Person after the revoke. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Person"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include access_administration. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Person, role, or assignment not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Would remove the last access-administration grant. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "last_admin_required",
+                     *       "message": "At least one person with access administration must remain."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

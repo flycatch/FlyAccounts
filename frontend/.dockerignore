@@ -2,3 +2,8 @@ node_modules
 dist
 coverage
 .vite
+.git
+*.log
+*.log*
+.env
+.env.*

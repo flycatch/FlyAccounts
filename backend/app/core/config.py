@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     s3_secret_key: str = "minioadmin"
     cors_origins: str = "http://localhost:8080"
     openapi_path: str = "/app/contracts/openapi.yaml"
+    microsoft_tenant_id: str = ""
+    microsoft_client_id: str = ""
+    initial_admin_email: str = ""
+    jwt_signing_key: str = "change-me"
+    jwt_access_ttl_seconds: int = 900
+    jwt_refresh_ttl_seconds: int = 604800
 
     @property
     def cors_origin_list(self) -> list[str]:

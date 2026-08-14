@@ -9,11 +9,18 @@ vi.mock("../src/api/client", () => ({
   },
 }));
 
+vi.mock("../src/auth/msal", () => ({
+  loginWithMicrosoft: vi.fn(),
+}));
+
+import App from "../src/App";
 import { StatusPage } from "../src/pages/StatusPage";
+import { ACCESS_TOKEN_KEY, clearTokens } from "../src/auth/tokens";
 
 describe("connection status", () => {
   beforeEach(() => {
     getStatus.mockReset();
+    clearTokens();
   });
 
   it("shows connected successfully on HTTP 200 and never not-connected", async () => {
@@ -41,5 +48,12 @@ describe("connection status", () => {
     await waitFor(() => {
       expect(screen.queryByText(/Database:/)).not.toBeInTheDocument();
     });
+  });
+
+  it("unsigned visitors never see connection confirmation as a public home", async () => {
+    render(<App />);
+    expect(await screen.findByRole("button", { name: /sign in with microsoft/i })).toBeInTheDocument();
+    expect(screen.queryByText("The application is connected successfully.")).not.toBeInTheDocument();
+    expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
   });
 });
