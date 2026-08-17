@@ -59,6 +59,16 @@ const roles = [
   },
 ];
 
+async function openInviteModal() {
+  fireEvent.click(screen.getByRole("button", { name: /^invite user$/i }));
+  expect(await screen.findByRole("dialog", { name: /invite user/i })).toBeInTheDocument();
+}
+
+async function openAssignModal() {
+  fireEvent.click(screen.getByRole("button", { name: /^assign roles$/i }));
+  expect(await screen.findByRole("dialog", { name: /assign roles/i })).toBeInTheDocument();
+}
+
 describe("UsersPage", () => {
   beforeEach(() => {
     get.mockReset();
@@ -97,14 +107,15 @@ describe("UsersPage", () => {
     expect(screen.getByText("alex@contoso.com")).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/person/i), { target: { value: "user-1" } });
+    await openAssignModal();
+    fireEvent.change(screen.getByLabelText(/^person$/i), { target: { value: "user-1" } });
     fireEvent.change(screen.getByLabelText(/^role$/i), { target: { value: "role-finance" } });
-    fireEvent.click(screen.getByRole("button", { name: /assign role/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^assign role$/i }));
     expect(await screen.findByText("Role assigned.")).toBeInTheDocument();
     expect(post).toHaveBeenCalled();
   });
 
-  it("invites with two roles and with no roles and surfaces invite errors", async () => {
+  it("invites with a role and with no roles and surfaces invite errors", async () => {
     const invited: typeof people = [];
     get.mockImplementation((path: string) => {
       if (path === "/people") {
@@ -131,29 +142,37 @@ describe("UsersPage", () => {
 
     render(<UsersPage />);
     await screen.findByText("Alex Example");
+    await openInviteModal();
     fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "two@contoso.com" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: /hr user/i }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /finance user/i }));
+    fireEvent.change(screen.getByLabelText(/invite role/i), { target: { value: "role-hr" } });
     fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
     expect(await screen.findByText("Invite recorded.")).toBeInTheDocument();
     expect(post).toHaveBeenCalledWith(
       "/people/invites",
       expect.objectContaining({
-        body: expect.objectContaining({ email: "two@contoso.com" }),
+        body: { email: "two@contoso.com", roleIds: ["role-hr"] },
       }),
     );
     expect((await screen.findAllByText("two@contoso.com")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Invited").length).toBeGreaterThan(0);
 
+    await openInviteModal();
     fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "none@contoso.com" } });
     fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
     expect((await screen.findAllByText("none@contoso.com")).length).toBeGreaterThan(0);
+    expect(post).toHaveBeenCalledWith(
+      "/people/invites",
+      expect.objectContaining({
+        body: { email: "none@contoso.com", roleIds: [] },
+      }),
+    );
 
     post.mockResolvedValueOnce({
       data: undefined,
       error: { code: "duplicate_invite", message: "That email is already invited." },
       response: { ok: false, status: 409 },
     });
+    await openInviteModal();
     fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "two@contoso.com" } });
     fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
     expect(await screen.findByText("That email is already invited.")).toBeInTheDocument();
@@ -172,22 +191,35 @@ describe("UsersPage", () => {
     post.mockImplementation((path: string) => {
       if (path === "/people/invites/{inviteId}/roles") {
         return Promise.resolve({
-          data: { ...people[2], roles: [{ id: "role-hr", name: "HR User" }, { id: "role-finance", name: "Finance User" }] },
+          data: {
+            ...people[2],
+            roles: [
+              { id: "role-hr", name: "HR User" },
+              { id: "role-finance", name: "Finance User" },
+            ],
+          },
           error: undefined,
           response: { ok: true },
         });
       }
       return Promise.resolve({
-        data: { ...people[0], roles: [{ id: "role-hr", name: "HR User" }, { id: "role-finance", name: "Finance User" }] },
+        data: {
+          ...people[0],
+          roles: [
+            { id: "role-hr", name: "HR User" },
+            { id: "role-finance", name: "Finance User" },
+          ],
+        },
         error: undefined,
         response: { ok: true },
       });
     });
     render(<UsersPage />);
     await screen.findByText("Alex Example");
+    await openAssignModal();
     fireEvent.change(screen.getByLabelText(/^person$/i), { target: { value: "invite-1" } });
     fireEvent.change(screen.getByLabelText(/^role$/i), { target: { value: "role-finance" } });
-    fireEvent.click(screen.getByRole("button", { name: /assign role/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^assign role$/i }));
     expect(await screen.findByText("Role assigned.")).toBeInTheDocument();
     expect(post).toHaveBeenCalledWith(
       "/people/invites/{inviteId}/roles",
@@ -231,11 +263,13 @@ describe("UsersPage", () => {
     });
     render(<UsersPage />);
     await screen.findByText("Alex Example");
-    fireEvent.change(screen.getByLabelText(/person/i), { target: { value: "user-1" } });
+    await openAssignModal();
+    fireEvent.change(screen.getByLabelText(/^person$/i), { target: { value: "user-1" } });
     fireEvent.change(screen.getByLabelText(/^role$/i), { target: { value: "role-hr" } });
-    fireEvent.click(screen.getByRole("button", { name: /assign role/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^assign role$/i }));
     expect(await screen.findByText("That role is already assigned.")).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
     del.mockResolvedValue({
       data: undefined,
       error: { code: "last_admin_required", message: "At least one person with access administration must remain." },

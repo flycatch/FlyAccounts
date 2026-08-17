@@ -35,13 +35,26 @@ export function SignInPage({ onSignedIn }: SignInPageProps) {
   }
 
   return (
-    <main className="app-page sign-in-page">
-      <h1>FlyAccounts</h1>
-      <p>Sign in with your organizational Microsoft work or school account to continue.</p>
-      <button type="button" onClick={() => void handleSignIn()} disabled={busy}>
-        Sign in with Microsoft
-      </button>
-      {error ? <p role="alert">{error}</p> : null}
+    <main className="sign-in-page">
+      <div className="sign-in-panel">
+        <p className="sign-in-brand">FlyAccounts</p>
+        <p className="sign-in-copy">
+          Sign in with your organizational Microsoft work or school account to continue.
+        </p>
+        <button
+          type="button"
+          className="sign-in-cta"
+          onClick={() => void handleSignIn()}
+          disabled={busy}
+        >
+          {busy ? "Signing in…" : "Sign in with Microsoft"}
+        </button>
+        {error ? (
+          <p className="sign-in-alert" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </main>
   );
 }

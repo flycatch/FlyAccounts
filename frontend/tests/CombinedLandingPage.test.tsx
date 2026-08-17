@@ -30,7 +30,7 @@ const baseMe = {
 
 describe("CombinedLandingPage", () => {
   it("lists name and every assigned role and only returned sections", () => {
-    render(<CombinedLandingPage me={baseMe} onSignedOut={() => undefined} />);
+    render(<CombinedLandingPage me={baseMe} />);
     expect(screen.getByText("Alex Example")).toBeInTheDocument();
     expect(screen.getByText("Finance User")).toBeInTheDocument();
     expect(screen.getByText("HR User")).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe("CombinedLandingPage", () => {
   });
 
   it("lists every assigned role after invited sign-in and omits unpermitted sections", () => {
-    render(<CombinedLandingPage me={baseMe} onSignedOut={() => undefined} />);
+    render(<CombinedLandingPage me={baseMe} />);
     expect(screen.getByText("Finance User")).toBeInTheDocument();
     expect(screen.getByText("HR User")).toBeInTheDocument();
     expect(screen.queryByText("PMO User")).not.toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("CombinedLandingPage", () => {
         sections: [{ code: "hr_landing", title: "HR", body: "Content allowed by hr_landing." }],
       },
     };
-    render(<CombinedLandingPage me={me} onSignedOut={() => undefined} />);
+    render(<CombinedLandingPage me={me} />);
     expect(screen.queryByText(/cost:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/margin:/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Finance")).not.toBeInTheDocument();

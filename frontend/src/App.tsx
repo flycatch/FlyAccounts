@@ -83,9 +83,7 @@ export default function App() {
       {current === "users" ? <UsersPage /> : null}
       {current === "roles" ? <RolesPage /> : null}
       {current === "permissions" ? <PermissionsPage /> : null}
-      {current === "home" ? (
-        <CombinedLandingPage me={me} onSignedOut={() => void handleSignOut()} />
-      ) : null}
+      {current === "home" ? <CombinedLandingPage me={me} /> : null}
     </AppShell>
   );
 }

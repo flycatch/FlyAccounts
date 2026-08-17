@@ -1,5 +1,6 @@
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   background: var(--color-page);
   color: var(--color-black);
@@ -9,21 +10,25 @@
 .app-shell-sidebar {
   box-sizing: border-box;
   width: var(--sidebar-width);
+  height: 100vh;
+  flex-shrink: 0;
   background: var(--color-surface);
   box-shadow: var(--shadow-sidebar);
   padding: 26px 13px 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-5);
+  overflow: hidden;
 }
 
 .app-shell-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0;
+  flex-shrink: 0;
   font-family: var(--font-body);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   font-size: 18px;
   color: var(--color-black);
 }
@@ -31,29 +36,41 @@
 .app-shell-nav {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  gap: var(--space-1);
 }
 
 .app-shell-nav-group {
-  margin: 0;
+  margin: var(--space-4) 0 var(--space-2);
   padding: 0 24px;
   font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--color-black);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-nav-group);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-subtext);
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+}
+
+.app-shell-nav-group:first-child {
+  margin-top: 0;
 }
 
 .app-shell-nav-item {
   box-sizing: border-box;
   height: 40px;
-  padding: 12px 24px;
+  padding: var(--space-3) 24px;
   border: 0;
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-black);
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-nav);
   text-align: left;
   width: 100%;
   cursor: pointer;
@@ -61,72 +78,104 @@
 
 .app-shell-nav-item.is-active {
   background: var(--color-nav-active);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .app-shell-nav-item:focus-visible,
 .app-shell-toggle:focus-visible,
 .app-shell-sign-out:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
 .app-shell-toggle {
   display: none;
   font-family: var(--font-body);
-  font-size: 12px;
-  min-height: 2.75rem;
-  padding: 8px 12px;
+  font-size: var(--text-nav);
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: var(--control-padding-y) var(--control-padding-x);
   border: 0.8px solid var(--color-stroke);
   border-radius: var(--radius-control);
   background: var(--color-surface);
   color: var(--color-subtext);
 }
 
+.app-shell-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-shell-header-wrap {
+  flex-shrink: 0;
+  padding: 26px 24px 0;
+}
+
 .app-shell-main {
   flex: 1;
   min-width: 0;
-  padding: 26px 24px 32px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) 24px 32px;
 }
 
 .app-shell-sign-out {
+  flex-shrink: 0;
   margin-top: auto;
   border: 0.8px solid var(--color-stroke);
   border-radius: var(--radius-control);
   background: var(--color-surface);
   color: var(--color-subtext);
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 12px;
-  padding: 8px 12px;
-  min-height: 30px;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-nav);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  min-height: var(--control-height);
   cursor: pointer;
 }
 
 @media (max-width: 767px) {
   .app-shell {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .app-shell-toggle {
     display: inline-flex;
     align-items: center;
-    margin: 16px 16px 0;
+    margin: var(--space-4) var(--space-4) 0;
   }
 
   .app-shell-sidebar {
     width: 100%;
+    height: auto;
+    max-height: min(70vh, 28rem);
     box-shadow: none;
     border-bottom: 0.8px solid var(--color-stroke);
     display: none;
-    padding: 16px;
+    padding: var(--space-4);
   }
 
   .app-shell-sidebar.is-open {
     display: flex;
   }
 
+  .app-shell-content {
+    overflow: visible;
+  }
+
+  .app-shell-header-wrap {
+    padding: var(--space-4) var(--space-4) 0;
+  }
+
   .app-shell-main {
-    padding: 16px;
+    overflow: visible;
+    padding: var(--space-4);
   }
 }

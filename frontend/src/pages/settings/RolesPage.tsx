@@ -142,10 +142,7 @@ export function RolesPage() {
 
   return (
     <section className="settings-page roles-page">
-      <header>
-        <h1>Roles</h1>
-        <p className="settings-subtitle">Create and edit roles, then attach existing permissions.</p>
-      </header>
+      <p className="settings-subtitle">Create and edit roles, then attach existing permissions.</p>
       <form
         className="settings-form"
         onSubmit={(event) => {

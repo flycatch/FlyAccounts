@@ -30,10 +30,7 @@ export function PermissionsPage() {
 
   return (
     <section className="settings-page permissions-page">
-      <header>
-        <h1>Permissions</h1>
-        <p className="settings-subtitle">Read-only catalog grouped by module. Permission types cannot be created here.</p>
-      </header>
+      <p className="settings-subtitle">Read-only catalog grouped by module. Permission types cannot be created here.</p>
       <div className="settings-module-list">
         {grouped.map(([module, rows]) => (
           <article key={module} className="settings-card">

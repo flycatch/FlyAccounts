@@ -35,7 +35,9 @@ describe("PermissionsPage", () => {
     });
 
     render(<PermissionsPage />);
-    expect(await screen.findByRole("heading", { name: /permissions/i })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/read-only catalog grouped by module/i),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^settings$/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^finance$/i })).toBeInTheDocument();
     expect(screen.getByText("Access administration")).toBeInTheDocument();

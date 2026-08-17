@@ -1,11 +1,8 @@
-:root {
-  color: #1a1a1a;
-  background: #f6f7f9;
-  font-family: system-ui, sans-serif;
-}
-
 body {
   margin: 0;
+  background: var(--color-page);
+  color: var(--color-black);
+  font-family: var(--font-body);
 }
 
 .app-page {
@@ -14,10 +11,12 @@ body {
   width: 100%;
   max-width: 48rem;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
+  font-family: var(--font-body);
+  color: var(--color-black);
 }
 
 .app-page h1,
@@ -28,39 +27,122 @@ body {
   overflow-wrap: anywhere;
 }
 
+.app-page h1 {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-page-title);
+}
+
 .app-page button,
 .app-page select {
   font: inherit;
-  min-height: 2.75rem;
-  padding: 0.5rem 0.75rem;
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: var(--control-padding-y) var(--control-padding-x);
   width: fit-content;
   max-width: 100%;
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-black);
+  cursor: pointer;
 }
 
 .app-page button:focus-visible,
 .app-page select:focus-visible,
 .app-page a:focus-visible {
-  outline: 2px solid #2450c5;
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
-.sign-in-page button {
+.sign-in-page {
+  box-sizing: border-box;
+  min-height: 100vh;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(91, 137, 255, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 80%, rgba(91, 137, 255, 0.08), transparent 50%),
+    var(--color-page);
+}
+
+.sign-in-panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 26rem;
+  padding: var(--space-6) var(--space-5);
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--modal-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sidebar);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sign-in-brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 28px;
+  line-height: 1.2;
+  color: var(--color-black);
+}
+
+.sign-in-copy {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--color-subtext);
+}
+
+.sign-in-cta {
+  width: 100%;
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--text-body);
+  cursor: pointer;
+}
+
+.sign-in-cta:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.sign-in-cta:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.sign-in-alert {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-family: var(--font-body);
+  font-size: 13px;
 }
 
 @media (min-width: 768px) {
   .app-page {
-    padding: 2.5rem 2rem;
-  }
-
-  .sign-in-page button {
-    width: auto;
+    padding: var(--space-6) var(--space-5);
   }
 }
 
 @media (min-width: 1024px) {
   .app-page {
-    padding: 3rem 2rem;
     max-width: 56rem;
   }
 }

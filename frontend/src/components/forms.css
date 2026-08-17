@@ -1,0 +1,86 @@
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-subtext);
+}
+
+.ui-control {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-regular);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.ui-control:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-control.is-invalid,
+.ui-control[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.ui-control:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ui-field-error {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: var(--font-weight-regular);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-danger);
+}
+
+/* Settings forms reuse shared control chrome */
+.settings-form input:not([type="checkbox"]):not([type="radio"]),
+.settings-form select {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-regular);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.settings-form input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+.settings-form select:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.settings-form input.is-invalid,
+.settings-form select.is-invalid,
+.settings-form input[aria-invalid="true"],
+.settings-form select[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}

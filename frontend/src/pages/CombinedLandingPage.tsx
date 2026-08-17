@@ -1,5 +1,4 @@
 import type { components } from "../api/schema";
-import { signOut } from "../auth/tokens";
 import { StatusPage } from "./StatusPage";
 import "./CombinedLandingPage.css";
 
@@ -7,30 +6,14 @@ type MeResponse = components["schemas"]["MeResponse"];
 
 type CombinedLandingPageProps = {
   me: MeResponse;
-  onSignedOut: () => void;
 };
 
-export function CombinedLandingPage({ me, onSignedOut }: CombinedLandingPageProps) {
+export function CombinedLandingPage({ me }: CombinedLandingPageProps) {
   const sensitive = me.landing.sensitiveFinancialFields;
 
-  async function handleSignOut() {
-    await signOut();
-    onSignedOut();
-  }
-
   return (
-    <section className="app-page combined-landing-page">
-      <header className="landing-header">
-        <div>
-          <h1>FlyAccounts</h1>
-          <p>{me.displayName}</p>
-        </div>
-        <div className="landing-actions">
-          <button type="button" onClick={() => void handleSignOut()}>
-            Sign out
-          </button>
-        </div>
-      </header>
+    <section className="combined-landing-page">
+      <p className="landing-welcome">{me.displayName}</p>
       <section>
         <h2>Assigned roles</h2>
         {me.roles.length === 0 ? (

@@ -2,10 +2,15 @@ import { useEffect, useState } from "react";
 
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/schema";
+import { Modal } from "../../components/Modal";
+import { SelectField } from "../../components/SelectField";
+import { TextField } from "../../components/TextField";
 import "./UsersPage.css";
 
 type Person = components["schemas"]["Person"];
 type Role = components["schemas"]["Role"];
+
+type ActiveModal = "invite" | "assign" | null;
 
 function statusLabel(status: Person["status"]): string {
   if (status === "active") {
@@ -45,7 +50,8 @@ export function UsersPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRoleIds, setInviteRoleIds] = useState<string[]>([]);
+  const [inviteRoleId, setInviteRoleId] = useState("");
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,6 +71,26 @@ export function UsersPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  function closeModal() {
+    setActiveModal(null);
+  }
+
+  function openInvite() {
+    setError(null);
+    setMessage(null);
+    setInviteEmail("");
+    setInviteRoleId("");
+    setActiveModal("invite");
+  }
+
+  function openAssign() {
+    setError(null);
+    setMessage(null);
+    setSelectedUserId("");
+    setSelectedRoleId("");
+    setActiveModal("assign");
+  }
 
   async function handleAssign() {
     setError(null);
@@ -89,6 +115,9 @@ export function UsersPage() {
       return;
     }
     setMessage("Role assigned.");
+    setSelectedUserId("");
+    setSelectedRoleId("");
+    setActiveModal(null);
     await load();
   }
 
@@ -99,8 +128,9 @@ export function UsersPage() {
       setError("Enter a work email to invite.");
       return;
     }
+    const roleIds = inviteRoleId ? [inviteRoleId] : [];
     const { data, error: apiError } = await apiClient.POST("/people/invites", {
-      body: { email: inviteEmail.trim(), roleIds: inviteRoleIds },
+      body: { email: inviteEmail.trim(), roleIds },
     });
     if (apiError || !data) {
       setError(errorMessage(apiError, "The invite could not be created."));
@@ -108,14 +138,9 @@ export function UsersPage() {
     }
     setMessage("Invite recorded.");
     setInviteEmail("");
-    setInviteRoleIds([]);
+    setInviteRoleId("");
+    setActiveModal(null);
     await load();
-  }
-
-  function toggleInviteRole(roleId: string) {
-    setInviteRoleIds((current) =>
-      current.includes(roleId) ? current.filter((id) => id !== roleId) : [...current, roleId],
-    );
   }
 
   async function handleRevoke(person: Person, roleId: string) {
@@ -167,78 +192,17 @@ export function UsersPage() {
 
   return (
     <section className="settings-page users-page">
-      <header>
-        <h1>Users</h1>
-        <p className="settings-subtitle">Invite people and assign roles to signed-in users.</p>
-      </header>
-      <form
-        className="settings-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleInvite();
-        }}
-      >
-        <label>
-          Work email
-          <input
-            type="email"
-            value={inviteEmail}
-            onChange={(event) => setInviteEmail(event.target.value)}
-            autoComplete="off"
-          />
-        </label>
-        <fieldset className="settings-role-options">
-          <legend>Invite roles</legend>
-          {roles.map((role) => (
-            <label key={role.id}>
-              <input
-                type="checkbox"
-                checked={inviteRoleIds.includes(role.id)}
-                onChange={() => toggleInviteRole(role.id)}
-              />
-              {role.name}
-            </label>
-          ))}
-        </fieldset>
-        <button type="submit" className="settings-primary">
-          Invite
+      <p className="settings-subtitle">Invite people and assign roles to signed-in users.</p>
+      <div className="settings-page-actions">
+        <button type="button" className="settings-primary" onClick={openInvite}>
+          Invite User
         </button>
-      </form>
-      <form
-        className="settings-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleAssign();
-        }}
-      >
-        <label>
-          Person
-          <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>
-            <option value="">Select a person</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.displayName ?? person.email} ({person.email})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Role
-          <select value={selectedRoleId} onChange={(event) => setSelectedRoleId(event.target.value)}>
-            <option value="">Select a role</option>
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit" className="settings-primary">
-          Assign role
+        <button type="button" className="settings-primary" onClick={openAssign}>
+          Assign Roles
         </button>
-      </form>
-      {error ? <p role="alert">{error}</p> : null}
-      {message ? <p>{message}</p> : null}
+      </div>
+      {error && !activeModal ? <p role="alert">{error}</p> : null}
+      {message && !activeModal ? <p>{message}</p> : null}
       <div className="settings-card">
         <div className="settings-card-header">
           <h2 className="settings-card-title">People</h2>
@@ -279,6 +243,107 @@ export function UsersPage() {
           ))}
         </div>
       </div>
+
+      <Modal
+        open={activeModal === "invite"}
+        title="Invite User"
+        onClose={closeModal}
+        footer={
+          <>
+            <button type="button" className="settings-secondary" onClick={closeModal}>
+              Cancel
+            </button>
+            <button type="submit" form="invite-user-form" className="settings-primary">
+              Invite
+            </button>
+          </>
+        }
+      >
+        <form
+          id="invite-user-form"
+          className="settings-form settings-form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleInvite();
+          }}
+        >
+          <TextField
+            label="Work email"
+            type="email"
+            name="invite-email"
+            value={inviteEmail}
+            onChange={(event) => setInviteEmail(event.target.value)}
+            autoComplete="off"
+          />
+          <SelectField
+            label="Invite Role"
+            name="invite-role"
+            value={inviteRoleId}
+            onChange={(event) => setInviteRoleId(event.target.value)}
+          >
+            <option value="">No role</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </SelectField>
+          {error && activeModal === "invite" ? <p role="alert">{error}</p> : null}
+        </form>
+      </Modal>
+
+      <Modal
+        open={activeModal === "assign"}
+        title="Assign Roles"
+        onClose={closeModal}
+        footer={
+          <>
+            <button type="button" className="settings-secondary" onClick={closeModal}>
+              Cancel
+            </button>
+            <button type="submit" form="assign-roles-form" className="settings-primary">
+              Assign role
+            </button>
+          </>
+        }
+      >
+        <form
+          id="assign-roles-form"
+          className="settings-form settings-form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleAssign();
+          }}
+        >
+          <SelectField
+            label="Person"
+            name="assign-person"
+            value={selectedUserId}
+            onChange={(event) => setSelectedUserId(event.target.value)}
+          >
+            <option value="">Select a person</option>
+            {people.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.displayName ?? person.email} ({person.email})
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Role"
+            name="assign-role"
+            value={selectedRoleId}
+            onChange={(event) => setSelectedRoleId(event.target.value)}
+          >
+            <option value="">Select a role</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </SelectField>
+          {error && activeModal === "assign" ? <p role="alert">{error}</p> : null}
+        </form>
+      </Modal>
     </section>
   );
 }

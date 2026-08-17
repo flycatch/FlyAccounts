@@ -1,3 +1,5 @@
+@import "../../components/forms.css";
+
 .settings-page {
   display: flex;
   flex-direction: column;
@@ -5,19 +7,17 @@
   max-width: 970px;
 }
 
-.settings-page h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--color-black);
+.settings-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .settings-page h2,
 .settings-card-title {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   font-size: 14px;
 }
 
@@ -25,80 +25,42 @@
 .settings-page label {
   margin: 0;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: var(--text-body);
   color: var(--color-black);
 }
 
 .settings-subtitle {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 10px;
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-subtitle);
   color: var(--color-subtext);
 }
 
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-.settings-role-options {
-  border: 0.8px solid var(--color-stroke);
-  border-radius: var(--radius-control);
-  padding: 8px 12px;
+.settings-form-stack {
+  flex-direction: column;
+}
+
+.settings-form label:not(.ui-field) {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 12rem;
-}
-
-.settings-role-options legend {
+  gap: var(--space-2);
   font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 8px;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-label);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-subtext);
 }
 
-.settings-role-options label {
-  flex-direction: row;
-  align-items: center;
-  text-transform: none;
-  font-family: var(--font-body);
-  font-size: 14px;
-  color: var(--color-black);
-}
-
-.settings-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 8px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-subtext);
-}
-
-.settings-form select,
-.settings-form input {
-  font-family: var(--font-body);
-  font-size: 14px;
-  min-height: 2.75rem;
-  padding: 8px 12px;
-  border: 0.8px solid var(--color-stroke);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-  color: var(--color-black);
-}
-
-.settings-form select:focus-visible,
-.settings-form input:focus-visible,
 .settings-primary:focus-visible,
 .settings-secondary:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -108,10 +70,11 @@
   background: var(--color-primary);
   color: #fff;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 10px;
-  padding: 8px 12px;
-  min-height: 30px;
+  font-weight: var(--font-weight-bold);
+  font-size: 12px;
+  padding: var(--control-padding-y) var(--control-padding-x);
+  min-height: var(--control-height);
+  height: var(--control-height);
   cursor: pointer;
 }
 
@@ -121,10 +84,11 @@
   background: var(--color-surface);
   color: var(--color-subtext);
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 12px;
-  padding: 8px 12px;
-  min-height: 30px;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-nav);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  min-height: var(--control-height);
+  height: var(--control-height);
   cursor: pointer;
 }
 
@@ -137,42 +101,42 @@
 .settings-card-header {
   box-sizing: border-box;
   min-height: 47px;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   background: var(--color-box);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .settings-card-body {
   background: var(--color-surface);
-  padding: 16px 18px;
+  padding: var(--space-4) 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .settings-row {
   box-sizing: border-box;
   min-height: 59px;
-  padding: 12px 20px;
+  padding: var(--space-3) 20px;
   border: 0.8px solid var(--color-stroke);
   border-radius: var(--radius-row);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .status-chip {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  padding: 4px 10px;
+  padding: var(--space-1) 10px;
   border-radius: var(--radius-pill);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--text-nav);
 }
 
 .status-chip.is-active {
@@ -192,7 +156,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .settings-role-list li {
@@ -202,13 +166,14 @@
 }
 
 @media (min-width: 768px) {
-  .settings-form {
+  .settings-form:not(.settings-form-stack) {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: end;
   }
 
-  .settings-form label {
+  .settings-form:not(.settings-form-stack) label:not(.ui-field),
+  .settings-form:not(.settings-form-stack) .ui-field {
     flex: 1 1 14rem;
   }
 
