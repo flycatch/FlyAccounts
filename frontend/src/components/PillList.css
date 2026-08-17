@@ -1,0 +1,37 @@
+.pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pill-list-item {
+  display: inline-flex;
+  align-items: center;
+  max-width: 9rem;
+  height: var(--pill-height);
+  padding: 0 var(--pill-padding-x);
+  border-radius: var(--radius-pill);
+  background: var(--color-box);
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: var(--pill-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill-list-more {
+  display: inline-flex;
+  align-items: center;
+  height: var(--pill-height);
+  padding: 0 var(--pill-padding-x);
+  border-radius: var(--radius-pill);
+  background: var(--color-track);
+  color: var(--color-subtext);
+  font-family: var(--font-body);
+  font-size: var(--pill-font-size);
+  font-weight: var(--font-weight-medium);
+}

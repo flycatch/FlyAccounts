@@ -73,6 +73,7 @@ Named capability stored as data. This feature does **not** create, rename, or de
 | name | string | Display label |
 | module | string | Required; not a closed enum (`settings`, `finance`, `hr`, `pmo`) |
 | action | string nullable | **Null means whole-module.** Future rows set e.g. `create`, `view` |
+| description | string nullable | Optional catalog explanation; max 512; not used for authorization |
 
 **Validation**
 
@@ -82,15 +83,15 @@ Named capability stored as data. This feature does **not** create, rename, or de
 
 **Seed mapping** (002 codes unchanged):
 
-| code | module | action |
-|------|--------|--------|
-| `access_administration` | `settings` | null |
-| `finance_landing` | `finance` | null |
-| `hr_landing` | `hr` | null |
-| `pmo_landing` | `pmo` | null |
-| `view_sensitive_financial_fields` | `finance` | `view_sensitive_financial_fields` |
+| code | module | action | description |
+|------|--------|--------|-------------|
+| `access_administration` | `settings` | null | Open Settings and manage people, roles, and assignments. |
+| `finance_landing` | `finance` | null | Open the finance landing. |
+| `hr_landing` | `hr` | null | Open the HR landing. |
+| `pmo_landing` | `pmo` | null | Open the PMO landing. |
+| `view_sensitive_financial_fields` | `finance` | `view_sensitive_financial_fields` | View cost, margin, and other sensitive financial fields. |
 
-Alembic `0003_user_management` adds `module` (NOT NULL) and `action` (nullable) on existing `permissions` and backfills the table above. No new permission table.
+Alembic `0003_user_management` adds `module` (NOT NULL) and `action` (nullable) on existing `permissions` and backfills the table above. Alembic `0004_permission_description` adds nullable `description` and backfills the seed copy. No new permission table.
 
 ### Role (now editable)
 

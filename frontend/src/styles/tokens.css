@@ -30,6 +30,8 @@
   --text-label: 11px;
   --text-page-title: 24px;
   --text-subtitle: 14px;
+  --text-code: 12px;
+  --text-meta: 11px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -53,4 +55,15 @@
   --modal-radius: 8px;
   --modal-shadow: 0 12px 40px rgba(44, 44, 44, 0.18);
   --modal-max-width: 28rem;
+
+  --split-gap: var(--space-4);
+  --card-padding: var(--space-4);
+  --pill-height: 24px;
+  --pill-padding-x: 10px;
+  --pill-font-size: 12px;
+  --icon-button-size: 36px;
+  --tooltip-bg: #2c2c2c;
+  --tooltip-fg: #ffffff;
+  --tooltip-radius: 4px;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }

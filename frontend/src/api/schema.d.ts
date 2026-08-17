@@ -416,6 +416,8 @@ export interface components {
             module: string;
             /** @description Omitted or null means a whole-module grant. Later rows may set a more specific action (e.g. create, view). A module-level grant does not imply child codes. */
             action?: string;
+            /** @description Optional human-readable explanation shown in the Permissions catalog. */
+            description?: string;
         };
         Role: {
             /** Format: uuid */

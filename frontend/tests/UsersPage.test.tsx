@@ -69,6 +69,10 @@ async function openAssignModal() {
   expect(await screen.findByRole("dialog", { name: /assign roles/i })).toBeInTheDocument();
 }
 
+function selectPerson(name: RegExp) {
+  fireEvent.click(screen.getByRole("button", { name }));
+}
+
 describe("UsersPage", () => {
   beforeEach(() => {
     get.mockReset();
@@ -82,10 +86,32 @@ describe("UsersPage", () => {
     });
   });
 
+  it("shows people as full-width cards and opens detail only after selection", async () => {
+    render(<UsersPage />);
+    expect(await screen.findByText("Alex Example")).toBeInTheDocument();
+    expect(screen.queryByText("Waiting for a role.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove person/i })).not.toBeInTheDocument();
+    selectPerson(/sam pending/i);
+    expect(screen.getByText("Waiting for a role.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+  });
+
+  it("keeps invite email focused while typing in the modal", async () => {
+    render(<UsersPage />);
+    await screen.findByText("Alex Example");
+    await openInviteModal();
+    const email = screen.getByLabelText(/work email/i);
+    email.focus();
+    fireEvent.change(email, { target: { value: "typed@contoso.com" } });
+    expect(email).toHaveFocus();
+    expect(email).toHaveValue("typed@contoso.com");
+  });
+
   it("shows an organization-entered person as pending and waiting for a role", async () => {
     render(<UsersPage />);
     expect(await screen.findByText("Sam Pending")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
+    selectPerson(/sam pending/i);
     expect(screen.getByText("Waiting for a role.")).toBeInTheDocument();
   });
 
@@ -231,7 +257,8 @@ describe("UsersPage", () => {
       error: { code: "last_admin_required", message: "At least one person with access administration must remain." },
       response: { ok: false, status: 409 },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: /revoke hr user/i })[0]);
+    selectPerson(/alex example/i);
+    fireEvent.click(screen.getByRole("button", { name: /revoke hr user/i }));
     expect(
       await screen.findByText("At least one person with access administration must remain."),
     ).toBeInTheDocument();
@@ -241,6 +268,7 @@ describe("UsersPage", () => {
     del.mockResolvedValueOnce({ data: undefined, error: undefined, response: { ok: true, status: 204 } });
     render(<UsersPage />);
     expect((await screen.findAllByText("invited@contoso.com")).length).toBeGreaterThan(0);
+    selectPerson(/invited@contoso\.com/i);
     fireEvent.click(screen.getByRole("button", { name: /cancel invite/i }));
     expect(await screen.findByText("Invite cancelled.")).toBeInTheDocument();
 
@@ -249,7 +277,8 @@ describe("UsersPage", () => {
       error: { code: "last_admin_required", message: "At least one person with access administration must remain." },
       response: { ok: false, status: 409 },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: /remove person/i })[0]);
+    selectPerson(/alex example/i);
+    fireEvent.click(screen.getByRole("button", { name: /remove person/i }));
     expect(
       await screen.findByText("At least one person with access administration must remain."),
     ).toBeInTheDocument();
@@ -275,7 +304,8 @@ describe("UsersPage", () => {
       error: { code: "last_admin_required", message: "At least one person with access administration must remain." },
       response: { ok: false, status: 409 },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: /revoke hr user/i })[0]);
+    selectPerson(/alex example/i);
+    fireEvent.click(screen.getByRole("button", { name: /revoke hr user/i }));
     expect(
       await screen.findByText("At least one person with access administration must remain."),
     ).toBeInTheDocument();

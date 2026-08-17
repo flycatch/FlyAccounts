@@ -1093,6 +1093,9 @@ components:
             Omitted or null means a whole-module grant. Later rows may set a
             more specific action (e.g. create, view). A module-level grant
             does not imply child codes.
+        description:
+          type: string
+          description: Optional human-readable explanation shown in the Permissions catalog.
     Role:
       type: object
       additionalProperties: false

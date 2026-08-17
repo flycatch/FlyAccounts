@@ -21,6 +21,7 @@ class Permission(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     module: Mapped[str] = mapped_column(String(64), nullable=False)
     action: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     role_permissions: Mapped[list["RolePermission"]] = relationship(back_populates="permission")
 

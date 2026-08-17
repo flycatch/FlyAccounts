@@ -26,11 +26,23 @@ FEATURE_OPENAPI = (
 )
 
 PERMISSION_SEED = [
-    ("access_administration", "Access administration", "settings", None),
-    ("view_sensitive_financial_fields", "View sensitive financial fields", "finance", "view_sensitive_financial_fields"),
-    ("finance_landing", "Finance landing", "finance", None),
-    ("hr_landing", "HR landing", "hr", None),
-    ("pmo_landing", "PMO landing", "pmo", None),
+    (
+        "access_administration",
+        "Access administration",
+        "settings",
+        None,
+        "Open Settings and manage people, roles, and assignments.",
+    ),
+    (
+        "view_sensitive_financial_fields",
+        "View sensitive financial fields",
+        "finance",
+        "view_sensitive_financial_fields",
+        "View cost, margin, and other sensitive financial fields.",
+    ),
+    ("finance_landing", "Finance landing", "finance", None, "Open the finance landing."),
+    ("hr_landing", "HR landing", "hr", None, "Open the HR landing."),
+    ("pmo_landing", "PMO landing", "pmo", None, "Open the PMO landing."),
 ]
 
 ROLE_SEED = [
@@ -47,8 +59,14 @@ ROLE_SEED = [
 
 def seed_rbac(db: Session) -> dict[str, Role]:
     permissions: dict[str, Permission] = {}
-    for code, name, module, action in PERMISSION_SEED:
-        permission = Permission(code=code, name=name, module=module, action=action)
+    for code, name, module, action, description in PERMISSION_SEED:
+        permission = Permission(
+            code=code,
+            name=name,
+            module=module,
+            action=action,
+            description=description,
+        )
         db.add(permission)
         permissions[code] = permission
     db.flush()

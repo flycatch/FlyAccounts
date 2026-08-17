@@ -26,6 +26,14 @@ def test_permissions_catalog_requires_admin(client, db):
     }
     assert by_code["access_administration"]["module"] == "settings"
     assert by_code["access_administration"].get("action") in (None, "")
+    assert (
+        by_code["access_administration"]["description"]
+        == "Open Settings and manage people, roles, and assignments."
+    )
     assert by_code["view_sensitive_financial_fields"]["module"] == "finance"
     assert by_code["view_sensitive_financial_fields"]["action"] == "view_sensitive_financial_fields"
+    assert (
+        by_code["view_sensitive_financial_fields"]["description"]
+        == "View cost, margin, and other sensitive financial fields."
+    )
     assert client.post("/v1/permissions", headers=auth_header(admin), json={}).status_code in {404, 405}

@@ -1,0 +1,59 @@
+.entity-card {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: var(--card-padding);
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-row);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font: inherit;
+  color: inherit;
+}
+
+.entity-card.is-static {
+  cursor: default;
+}
+
+.entity-card:hover {
+  border-color: var(--color-track);
+}
+
+.entity-card.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-nav-active);
+}
+
+.entity-card:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.entity-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.entity-card-subtitle {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-subtext);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

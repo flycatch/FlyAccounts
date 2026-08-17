@@ -49,6 +49,8 @@ def permission_payload(permission: Permission) -> dict:
     }
     if permission.action:
         payload["action"] = permission.action
+    if permission.description:
+        payload["description"] = permission.description
     return payload
 
 

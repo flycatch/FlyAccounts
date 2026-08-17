@@ -1,10 +1,9 @@
-@import "../../components/forms.css";
+@import "./forms.css";
 
 .settings-page {
   display: flex;
   flex-direction: column;
   gap: 22px;
-  max-width: 970px;
 }
 
 .settings-page-actions {
@@ -92,43 +91,6 @@
   cursor: pointer;
 }
 
-.settings-card {
-  border: 0.8px solid var(--color-stroke);
-  border-radius: var(--radius-control);
-  overflow: hidden;
-}
-
-.settings-card-header {
-  box-sizing: border-box;
-  min-height: 47px;
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-box);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.settings-card-body {
-  background: var(--color-surface);
-  padding: var(--space-4) 18px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.settings-row {
-  box-sizing: border-box;
-  min-height: 59px;
-  padding: var(--space-3) 20px;
-  border: 0.8px solid var(--color-stroke);
-  border-radius: var(--radius-row);
-  background: var(--color-surface);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -150,7 +112,7 @@
   background: var(--color-status-pending-bg);
 }
 
-.settings-role-list {
+.settings-detail-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -159,10 +121,99 @@
   gap: var(--space-2);
 }
 
-.settings-role-list li {
+.settings-detail-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-box);
+}
+
+.settings-detail-list-label {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.settings-module-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-5);
+}
+
+.settings-module-heading {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--color-black);
+}
+
+.settings-permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.permission-card-description {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-subtext);
+}
+
+.permission-card-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.permission-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.permission-card-field dt {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-subtext);
+}
+
+.permission-card-field dd {
+  margin: 0;
+}
+
+.permission-card-module {
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-meta);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-subtext);
+}
+
+.permission-card-action {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-black);
+}
+
+.permission-card-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  color: var(--color-subtext);
 }
 
 @media (min-width: 768px) {
@@ -176,11 +227,10 @@
   .settings-form:not(.settings-form-stack) .ui-field {
     flex: 1 1 14rem;
   }
+}
 
-  .settings-row,
-  .settings-role-list li {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+@media (max-width: 767px) {
+  .settings-permission-grid {
+    grid-template-columns: 1fr;
   }
 }

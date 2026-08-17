@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 
+import deleteIcon from "../../assets/icons/delete.svg";
+import editIcon from "../../assets/icons/edit.svg";
+import revokeIcon from "../../assets/icons/revoke.svg";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/schema";
-import "../settings/UsersPage.css";
-import "./RolesPage.css";
+import { DetailPanel } from "../../components/DetailPanel";
+import { EntityCard } from "../../components/EntityCard";
+import { IconButton } from "../../components/IconButton";
+import { MasterDetailLayout } from "../../components/MasterDetailLayout";
+import { Modal } from "../../components/Modal";
+import { PillList } from "../../components/PillList";
+import { SelectField } from "../../components/SelectField";
+import { TextField } from "../../components/TextField";
+import "../../components/settings.css";
 
 type Role = components["schemas"]["Role"];
 type Permission = components["schemas"]["Permission"];
@@ -27,17 +37,26 @@ function errorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
+function truncate(text: string, max = 80): string {
+  if (text.length <= max) {
+    return text;
+  }
+  return `${text.slice(0, max - 1)}…`;
+}
+
 export function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [attachId, setAttachId] = useState<Record<string, string>>({});
+  const [attachPermissionId, setAttachPermissionId] = useState("");
 
   async function load() {
     const [rolesResult, permissionsResult] = await Promise.all([
@@ -46,6 +65,10 @@ export function RolesPage() {
     ]);
     if (rolesResult.data) {
       setRoles(rolesResult.data.roles);
+      if (selectedRoleId && !rolesResult.data.roles.some((role) => role.id === selectedRoleId)) {
+        setSelectedRoleId(null);
+        setEditing(false);
+      }
     }
     if (permissionsResult.data) {
       setPermissions(permissionsResult.data.permissions);
@@ -54,7 +77,16 @@ export function RolesPage() {
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on mount only
   }, []);
+
+  function openCreate() {
+    setError(null);
+    setMessage(null);
+    setName("");
+    setDescription("");
+    setCreateOpen(true);
+  }
 
   async function handleCreate() {
     setError(null);
@@ -73,6 +105,8 @@ export function RolesPage() {
     setMessage("Role created.");
     setName("");
     setDescription("");
+    setCreateOpen(false);
+    setSelectedRoleId(data.id);
     await load();
   }
 
@@ -88,27 +122,27 @@ export function RolesPage() {
       return;
     }
     setMessage("Role updated.");
-    setEditingId(null);
+    setEditing(false);
     await load();
   }
 
   async function handleAttach(roleId: string) {
     setError(null);
     setMessage(null);
-    const permissionId = attachId[roleId];
-    if (!permissionId) {
+    if (!attachPermissionId) {
       setError("Choose a permission to attach.");
       return;
     }
     const { data, error: apiError } = await apiClient.POST("/roles/{roleId}/permissions", {
       params: { path: { roleId } },
-      body: { permissionId },
+      body: { permissionId: attachPermissionId },
     });
     if (apiError || !data) {
       setError(errorMessage(apiError, "The permission could not be attached."));
       return;
     }
     setMessage("Permission attached.");
+    setAttachPermissionId("");
     await load();
   }
 
@@ -137,110 +171,183 @@ export function RolesPage() {
       return;
     }
     setMessage("Role deleted.");
+    setSelectedRoleId(null);
+    setEditing(false);
     await load();
   }
+
+  const selectedRole = roles.find((role) => role.id === selectedRoleId) ?? null;
 
   return (
     <section className="settings-page roles-page">
       <p className="settings-subtitle">Create and edit roles, then attach existing permissions.</p>
-      <form
-        className="settings-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleCreate();
-        }}
-      >
-        <label>
-          Role name
-          <input value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          Description
-          <input value={description} onChange={(event) => setDescription(event.target.value)} />
-        </label>
-        <button type="submit" className="settings-primary">
-          Create role
+      <div className="settings-page-actions">
+        <button type="button" className="settings-primary" onClick={openCreate}>
+          Create Role
         </button>
-      </form>
-      {error ? <p role="alert">{error}</p> : null}
-      {message ? <p>{message}</p> : null}
-      {roles.map((role) => (
-        <article key={role.id} className="settings-card">
-          <div className="settings-card-header">
-            {editingId === role.id ? (
-              <div className="settings-form">
-                <label>
-                  Role name
-                  <input value={editName} onChange={(event) => setEditName(event.target.value)} />
-                </label>
-                <label>
-                  Description
-                  <input value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
-                </label>
-                <button type="button" className="settings-primary" onClick={() => void handleSave(role.id)}>
-                  Save role
-                </button>
-              </div>
-            ) : (
-              <h2 className="settings-card-title">{role.name}</h2>
-            )}
-            {editingId === role.id ? null : (
-              <button
-                type="button"
-                className="settings-secondary"
-                onClick={() => {
-                  setEditingId(role.id);
-                  setEditName(role.name);
-                  setEditDescription(role.description ?? "");
-                }}
-              >
-                Edit {role.name}
-              </button>
-            )}
-          </div>
-          <div className="settings-card-body">
-            {role.description ? <p>{role.description}</p> : null}
-            <ul className="settings-permission-list">
-              {role.permissions.map((permission) => (
-                <li key={permission.id}>
-                  <span>
-                    {permission.name} ({permission.code})
-                  </span>
-                  <button
-                    type="button"
-                    className="settings-secondary"
-                    onClick={() => void handleDetach(role.id, permission.id)}
-                  >
-                    Detach {permission.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="settings-form">
-              <label>
-                Attach permission
-                <select
-                  value={attachId[role.id] ?? ""}
-                  onChange={(event) => setAttachId((current) => ({ ...current, [role.id]: event.target.value }))}
+      </div>
+      {error && !createOpen ? <p role="alert">{error}</p> : null}
+      {message && !createOpen ? <p>{message}</p> : null}
+
+      <MasterDetailLayout
+        selected={Boolean(selectedRole)}
+        onBack={() => {
+          setSelectedRoleId(null);
+          setEditing(false);
+        }}
+        list={roles.map((role) => (
+          <EntityCard
+            key={role.id}
+            title={role.name}
+            subtitle={role.description ? truncate(role.description) : undefined}
+            selected={role.id === selectedRoleId}
+            onSelect={() => {
+              setSelectedRoleId(role.id);
+              setEditing(false);
+              setAttachPermissionId("");
+            }}
+            meta={<PillList items={role.permissions.map((permission) => permission.name)} />}
+          />
+        ))}
+        detail={
+          selectedRole ? (
+            <DetailPanel
+              title={selectedRole.name}
+              subtitle={editing ? undefined : selectedRole.description}
+              actions={
+                editing ? null : (
+                  <>
+                    <IconButton
+                      label={`Edit ${selectedRole.name}`}
+                      icon={<img src={editIcon} alt="" />}
+                      onClick={() => {
+                        setEditing(true);
+                        setEditName(selectedRole.name);
+                        setEditDescription(selectedRole.description ?? "");
+                      }}
+                    />
+                    <IconButton
+                      label={`Delete ${selectedRole.name}`}
+                      icon={<img src={deleteIcon} alt="" />}
+                      danger
+                      onClick={() => void handleDelete(selectedRole.id)}
+                    />
+                  </>
+                )
+              }
+            >
+              {editing ? (
+                <form
+                  className="settings-form settings-form-stack"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleSave(selectedRole.id);
+                  }}
                 >
-                  <option value="">Select a permission</option>
-                  {permissions.map((permission) => (
-                    <option key={permission.id} value={permission.id}>
-                      {permission.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="button" className="settings-primary" onClick={() => void handleAttach(role.id)}>
-                Attach permission
-              </button>
-              <button type="button" className="settings-secondary" onClick={() => void handleDelete(role.id)}>
-                Delete {role.name}
-              </button>
-            </div>
-          </div>
-        </article>
-      ))}
+                  <TextField
+                    label="Role name"
+                    name="edit-role-name"
+                    value={editName}
+                    onChange={(event) => setEditName(event.target.value)}
+                  />
+                  <TextField
+                    label="Description"
+                    name="edit-role-description"
+                    value={editDescription}
+                    onChange={(event) => setEditDescription(event.target.value)}
+                  />
+                  <div className="settings-page-actions">
+                    <button type="button" className="settings-secondary" onClick={() => setEditing(false)}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="settings-primary">
+                      Save role
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <ul className="settings-detail-list">
+                    {selectedRole.permissions.map((permission) => (
+                      <li key={permission.id}>
+                        <span className="settings-detail-list-label">
+                          {permission.name} ({permission.code})
+                        </span>
+                        <IconButton
+                          label={`Detach ${permission.name}`}
+                          icon={<img src={revokeIcon} alt="" />}
+                          onClick={() => void handleDetach(selectedRole.id, permission.id)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="settings-form settings-form-stack">
+                    <SelectField
+                      label="Attach permission"
+                      name="attach-permission"
+                      value={attachPermissionId}
+                      onChange={(event) => setAttachPermissionId(event.target.value)}
+                    >
+                      <option value="">Select a permission</option>
+                      {permissions.map((permission) => (
+                        <option key={permission.id} value={permission.id}>
+                          {permission.name}
+                        </option>
+                      ))}
+                    </SelectField>
+                    <button
+                      type="button"
+                      className="settings-primary"
+                      onClick={() => void handleAttach(selectedRole.id)}
+                    >
+                      Attach permission
+                    </button>
+                  </div>
+                </>
+              )}
+            </DetailPanel>
+          ) : null
+        }
+      />
+
+      <Modal
+        open={createOpen}
+        title="Create Role"
+        onClose={() => setCreateOpen(false)}
+        footer={
+          <>
+            <button type="button" className="settings-secondary" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="create-role-form" className="settings-primary">
+              Create role
+            </button>
+          </>
+        }
+      >
+        <form
+          id="create-role-form"
+          className="settings-form settings-form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleCreate();
+          }}
+        >
+          <TextField
+            label="Role name"
+            name="role-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <TextField
+            label="Description"
+            name="role-description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+          {error && createOpen ? <p role="alert">{error}</p> : null}
+        </form>
+      </Modal>
     </section>
   );
 }

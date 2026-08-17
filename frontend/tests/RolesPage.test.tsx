@@ -45,6 +45,35 @@ describe("RolesPage", () => {
     });
   });
 
+  async function openCreateModal() {
+    fireEvent.click(screen.getByRole("button", { name: /^create role$/i }));
+    expect(await screen.findByRole("dialog", { name: /create role/i })).toBeInTheDocument();
+  }
+
+  function selectRole(name: RegExp) {
+    fireEvent.click(screen.getByRole("button", { name }));
+  }
+
+  it("shows roles as cards and opens detail only after selection", async () => {
+    render(<RolesPage />);
+    expect(await screen.findByText("Custom")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/attach permission/i)).not.toBeInTheDocument();
+    selectRole(/custom/i);
+    expect(screen.getByLabelText(/attach permission/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+  });
+
+  it("keeps create-role name focused while typing in the modal", async () => {
+    render(<RolesPage />);
+    await screen.findByText("Custom");
+    await openCreateModal();
+    const nameField = screen.getByLabelText(/^role name$/i);
+    nameField.focus();
+    fireEvent.change(nameField, { target: { value: "Ops Lead" } });
+    expect(nameField).toHaveFocus();
+    expect(nameField).toHaveValue("Ops Lead");
+  });
+
   it("creates a role, attaches two permissions, edits, and detaches one", async () => {
     const created = {
       id: "role-new",
@@ -73,24 +102,29 @@ describe("RolesPage", () => {
 
     render(<RolesPage />);
     expect(await screen.findByText("Custom")).toBeInTheDocument();
+    await openCreateModal();
     fireEvent.change(screen.getByLabelText(/^role name$/i), { target: { value: "Ops" } });
     fireEvent.change(screen.getByLabelText(/^description$/i), { target: { value: "Operations" } });
-    fireEvent.click(screen.getByRole("button", { name: /create role/i }));
+    const submit = screen
+      .getAllByRole("button", { name: /^create role$/i })
+      .find((btn) => btn.getAttribute("form") === "create-role-form");
+    fireEvent.click(submit!);
     expect(await screen.findByText("Role created.")).toBeInTheDocument();
 
-    const attachSelects = screen.getAllByLabelText(/attach permission/i);
-    fireEvent.change(attachSelects[attachSelects.length - 1], { target: { value: "perm-hr" } });
-    fireEvent.click(screen.getAllByRole("button", { name: /attach permission/i }).at(-1)!);
-    fireEvent.change(screen.getAllByLabelText(/attach permission/i).at(-1)!, { target: { value: "perm-pmo" } });
-    fireEvent.click(screen.getAllByRole("button", { name: /attach permission/i }).at(-1)!);
+    selectRole(/^ops/i);
+    fireEvent.change(screen.getByLabelText(/attach permission/i), { target: { value: "perm-hr" } });
+    fireEvent.click(screen.getByRole("button", { name: /^attach permission$/i }));
+    fireEvent.change(screen.getByLabelText(/attach permission/i), { target: { value: "perm-pmo" } });
+    fireEvent.click(screen.getByRole("button", { name: /^attach permission$/i }));
     expect(post).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /edit ops/i }));
-    fireEvent.change(screen.getAllByLabelText(/^role name$/i)[1], { target: { value: "Operations" } });
+    fireEvent.change(screen.getByLabelText(/^role name$/i), { target: { value: "Operations" } });
     fireEvent.click(screen.getByRole("button", { name: /save role/i }));
     expect(await screen.findByText("Role updated.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: /detach pmo landing/i })[0]);
+    selectRole(/operations/i);
+    fireEvent.click(screen.getByRole("button", { name: /detach pmo landing/i }));
     expect(await screen.findByText("Permission detached.")).toBeInTheDocument();
   });
 
@@ -102,6 +136,7 @@ describe("RolesPage", () => {
     });
     render(<RolesPage />);
     await screen.findByText("Custom");
+    selectRole(/custom/i);
     fireEvent.click(screen.getByRole("button", { name: /delete custom/i }));
     expect(await screen.findByText("That role is still assigned to a person.")).toBeInTheDocument();
 

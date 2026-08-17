@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
 
+import cancelIcon from "../../assets/icons/cancel.svg";
+import deleteIcon from "../../assets/icons/delete.svg";
+import revokeIcon from "../../assets/icons/revoke.svg";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/schema";
+import { DetailPanel } from "../../components/DetailPanel";
+import { EntityCard } from "../../components/EntityCard";
+import { IconButton } from "../../components/IconButton";
+import { MasterDetailLayout } from "../../components/MasterDetailLayout";
 import { Modal } from "../../components/Modal";
+import { PillList } from "../../components/PillList";
 import { SelectField } from "../../components/SelectField";
 import { TextField } from "../../components/TextField";
-import "./UsersPage.css";
+import "../../components/settings.css";
 
 type Person = components["schemas"]["Person"];
 type Role = components["schemas"]["Role"];
@@ -47,8 +55,9 @@ function errorMessage(payload: unknown, fallback: string): string {
 export function UsersPage() {
   const [people, setPeople] = useState<Person[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [selectedRoleId, setSelectedRoleId] = useState("");
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [assignUserId, setAssignUserId] = useState("");
+  const [assignRoleId, setAssignRoleId] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRoleId, setInviteRoleId] = useState("");
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
@@ -62,6 +71,9 @@ export function UsersPage() {
     ]);
     if (peopleResult.data) {
       setPeople(peopleResult.data.people);
+      if (selectedPersonId && !peopleResult.data.people.some((person) => person.id === selectedPersonId)) {
+        setSelectedPersonId(null);
+      }
     }
     if (rolesResult.data) {
       setRoles(rolesResult.data.roles);
@@ -70,6 +82,7 @@ export function UsersPage() {
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on mount only
   }, []);
 
   function closeModal() {
@@ -87,36 +100,36 @@ export function UsersPage() {
   function openAssign() {
     setError(null);
     setMessage(null);
-    setSelectedUserId("");
-    setSelectedRoleId("");
+    setAssignUserId("");
+    setAssignRoleId("");
     setActiveModal("assign");
   }
 
   async function handleAssign() {
     setError(null);
     setMessage(null);
-    if (!selectedUserId || !selectedRoleId) {
+    if (!assignUserId || !assignRoleId) {
       setError("Choose a person and a role to assign.");
       return;
     }
-    const person = people.find((item) => item.id === selectedUserId);
+    const person = people.find((item) => item.id === assignUserId);
     const result =
       person?.personType === "invite"
         ? await apiClient.POST("/people/invites/{inviteId}/roles", {
-            params: { path: { inviteId: selectedUserId } },
-            body: { roleId: selectedRoleId },
+            params: { path: { inviteId: assignUserId } },
+            body: { roleId: assignRoleId },
           })
         : await apiClient.POST("/people/{userId}/roles", {
-            params: { path: { userId: selectedUserId } },
-            body: { roleId: selectedRoleId },
+            params: { path: { userId: assignUserId } },
+            body: { roleId: assignRoleId },
           });
     if (result.error || !result.data) {
       setError(errorMessage(result.error, "The role could not be assigned."));
       return;
     }
     setMessage("Role assigned.");
-    setSelectedUserId("");
-    setSelectedRoleId("");
+    setAssignUserId("");
+    setAssignRoleId("");
     setActiveModal(null);
     await load();
   }
@@ -173,6 +186,7 @@ export function UsersPage() {
       return;
     }
     setMessage("Invite cancelled.");
+    setSelectedPersonId(null);
     await load();
   }
 
@@ -187,8 +201,11 @@ export function UsersPage() {
       return;
     }
     setMessage("Person removed.");
+    setSelectedPersonId(null);
     await load();
   }
+
+  const selectedPerson = people.find((person) => person.id === selectedPersonId) ?? null;
 
   return (
     <section className="settings-page users-page">
@@ -203,46 +220,70 @@ export function UsersPage() {
       </div>
       {error && !activeModal ? <p role="alert">{error}</p> : null}
       {message && !activeModal ? <p>{message}</p> : null}
-      <div className="settings-card">
-        <div className="settings-card-header">
-          <h2 className="settings-card-title">People</h2>
-        </div>
-        <div className="settings-card-body">
-          {people.map((person) => (
-            <article key={person.id} className="settings-row">
-              <div>
-                <h3 className="settings-card-title">{person.displayName ?? person.email}</h3>
-                <p>{person.email}</p>
+
+      <MasterDetailLayout
+        selected={Boolean(selectedPerson)}
+        onBack={() => setSelectedPersonId(null)}
+        list={people.map((person) => (
+          <EntityCard
+            key={person.id}
+            title={person.displayName ?? person.email}
+            subtitle={person.email}
+            selected={person.id === selectedPersonId}
+            onSelect={() => setSelectedPersonId(person.id)}
+            meta={
+              <>
                 <span className={`status-chip is-${person.status}`}>{statusLabel(person.status)}</span>
-                {person.personType === "user" && person.roles.length === 0 ? <p>Waiting for a role.</p> : null}
-              </div>
-              <ul className="settings-role-list">
-                {person.roles.map((role) => (
+                <PillList items={person.roles.map((role) => role.name)} />
+              </>
+            }
+          />
+        ))}
+        detail={
+          selectedPerson ? (
+            <DetailPanel
+              title={selectedPerson.displayName ?? selectedPerson.email}
+              subtitle={selectedPerson.email}
+              actions={
+                selectedPerson.personType === "invite" ? (
+                  <IconButton
+                    label="Cancel invite"
+                    icon={<img src={cancelIcon} alt="" />}
+                    danger
+                    onClick={() => void handleCancel(selectedPerson.id)}
+                  />
+                ) : (
+                  <IconButton
+                    label="Remove person"
+                    icon={<img src={deleteIcon} alt="" />}
+                    danger
+                    onClick={() => void handleRemove(selectedPerson.id)}
+                  />
+                )
+              }
+            >
+              <span className={`status-chip is-${selectedPerson.status}`}>
+                {statusLabel(selectedPerson.status)}
+              </span>
+              {selectedPerson.personType === "user" && selectedPerson.roles.length === 0 ? (
+                <p>Waiting for a role.</p>
+              ) : null}
+              <ul className="settings-detail-list">
+                {selectedPerson.roles.map((role) => (
                   <li key={role.id}>
-                    <span>{role.name}</span>
-                    <button
-                      type="button"
-                      className="settings-secondary"
-                      onClick={() => void handleRevoke(person, role.id)}
-                    >
-                      Revoke {role.name}
-                    </button>
+                    <span className="settings-detail-list-label">{role.name}</span>
+                    <IconButton
+                      label={`Revoke ${role.name}`}
+                      icon={<img src={revokeIcon} alt="" />}
+                      onClick={() => void handleRevoke(selectedPerson, role.id)}
+                    />
                   </li>
                 ))}
               </ul>
-              {person.personType === "invite" ? (
-                <button type="button" className="settings-secondary" onClick={() => void handleCancel(person.id)}>
-                  Cancel invite
-                </button>
-              ) : (
-                <button type="button" className="settings-secondary" onClick={() => void handleRemove(person.id)}>
-                  Remove person
-                </button>
-              )}
-            </article>
-          ))}
-        </div>
-      </div>
+            </DetailPanel>
+          ) : null
+        }
+      />
 
       <Modal
         open={activeModal === "invite"}
@@ -318,8 +359,8 @@ export function UsersPage() {
           <SelectField
             label="Person"
             name="assign-person"
-            value={selectedUserId}
-            onChange={(event) => setSelectedUserId(event.target.value)}
+            value={assignUserId}
+            onChange={(event) => setAssignUserId(event.target.value)}
           >
             <option value="">Select a person</option>
             {people.map((person) => (
@@ -331,8 +372,8 @@ export function UsersPage() {
           <SelectField
             label="Role"
             name="assign-role"
-            value={selectedRoleId}
-            onChange={(event) => setSelectedRoleId(event.target.value)}
+            value={assignRoleId}
+            onChange={(event) => setAssignRoleId(event.target.value)}
           >
             <option value="">Select a role</option>
             {roles.map((role) => (

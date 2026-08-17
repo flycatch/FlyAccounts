@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/schema";
-import "../settings/UsersPage.css";
-import "./PermissionsPage.css";
+import { EntityCard } from "../../components/EntityCard";
+import "../../components/settings.css";
 
 type Permission = components["schemas"]["Permission"];
 
@@ -30,25 +30,39 @@ export function PermissionsPage() {
 
   return (
     <section className="settings-page permissions-page">
-      <p className="settings-subtitle">Read-only catalog grouped by module. Permission types cannot be created here.</p>
+      <p className="settings-subtitle">
+        Read-only catalog grouped by module. Permission types cannot be created here.
+      </p>
       <div className="settings-module-list">
         {grouped.map(([module, rows]) => (
-          <article key={module} className="settings-card">
-            <div className="settings-card-header">
-              <h2 className="settings-card-title">{module}</h2>
-            </div>
-            <div className="settings-card-body">
+          <section key={module}>
+            <h2 className="settings-module-heading">{module}</h2>
+            <div className="settings-permission-grid">
               {rows.map((permission) => (
-                <div key={permission.id} className="settings-row">
-                  <div>
-                    <p>{permission.name}</p>
-                    <p>{permission.code}</p>
-                    {permission.action ? <p>{permission.action}</p> : <p>Whole-module grant</p>}
-                  </div>
-                </div>
+                <EntityCard key={permission.id} title={permission.name}>
+                  {permission.description ? (
+                    <p className="permission-card-description">{permission.description}</p>
+                  ) : null}
+                  <dl className="permission-card-fields">
+                    <div className="permission-card-field">
+                      <dt>Module</dt>
+                      <dd className="permission-card-module">{permission.module}</dd>
+                    </div>
+                    <div className="permission-card-field">
+                      <dt>Action</dt>
+                      <dd className="permission-card-action">
+                        {permission.action ? permission.action : "Whole-module grant"}
+                      </dd>
+                    </div>
+                    <div className="permission-card-field">
+                      <dt>Code</dt>
+                      <dd className="permission-card-code">{permission.code}</dd>
+                    </div>
+                  </dl>
+                </EntityCard>
               ))}
             </div>
-          </article>
+          </section>
         ))}
       </div>
     </section>

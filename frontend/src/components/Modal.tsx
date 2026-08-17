@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
+import closeIcon from "../assets/icons/close.svg";
 import "./Modal.css";
 
 type ModalProps = {
@@ -13,6 +14,9 @@ type ModalProps = {
 export function Modal({ open, title, onClose, children, footer }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) {
@@ -24,7 +28,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
       }
     }
 
@@ -33,7 +37,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
       document.removeEventListener("keydown", onKeyDown);
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) {
     return null;
@@ -62,7 +66,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
             {title}
           </h2>
           <button type="button" className="ui-modal-close" aria-label="Close" onClick={onClose}>
-            ×
+            <img src={closeIcon} alt="" />
           </button>
         </div>
         <div className="ui-modal-body">{children}</div>
