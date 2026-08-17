@@ -15,40 +15,61 @@ from app.core.errors import ApiError
 from app.core.security import issue_access_token
 from app.db.session import get_db
 from app.main import app
-from app.models import Base, Permission, Role, RoleAssignment, RolePermission, User
+from app.models import Base, Invite, InviteRole, Permission, Role, RoleAssignment, RolePermission, User
 
 FEATURE_OPENAPI = (
     Path(__file__).resolve().parents[2]
     / "specs"
-    / "002-microsoft-auth-rbac"
+    / "004-settings-routes-rbac"
     / "contracts"
     / "openapi.yaml"
 )
 
 PERMISSION_SEED = [
-    ("access_administration", "Access administration"),
-    ("view_sensitive_financial_fields", "View sensitive financial fields"),
-    ("finance_landing", "Finance landing"),
-    ("hr_landing", "HR landing"),
-    ("pmo_landing", "PMO landing"),
+    (
+        "manage_users",
+        "Manage users",
+        "settings",
+        None,
+        "Open Settings → Users and manage people, invites, and role assignments.",
+    ),
+    (
+        "manage_roles",
+        "Manage roles",
+        "settings",
+        None,
+        "Open Settings → Roles and create, edit, or delete roles and attach permissions.",
+    ),
+    (
+        "manage_permissions",
+        "Manage permissions",
+        "settings",
+        None,
+        "Open Settings → Permissions and view the permission catalog.",
+    ),
 ]
 
 ROLE_SEED = [
-    ("Entity Admin", "Assign and revoke existing roles", ["access_administration"]),
     (
-        "Finance User",
-        "Finance landing and sensitive financial fields",
-        ["view_sensitive_financial_fields", "finance_landing"],
+        "System Admin",
+        "Manage users, roles, and permissions",
+        ["manage_users", "manage_roles", "manage_permissions"],
     ),
-    ("HR User", "HR landing", ["hr_landing"]),
-    ("PMO User", "PMO landing", ["pmo_landing"]),
+    ("Member", "General member with no settings permissions", []),
+    ("Operator", "Operator with no settings permissions", []),
 ]
 
 
 def seed_rbac(db: Session) -> dict[str, Role]:
     permissions: dict[str, Permission] = {}
-    for code, name in PERMISSION_SEED:
-        permission = Permission(code=code, name=name)
+    for code, name, module, action, description in PERMISSION_SEED:
+        permission = Permission(
+            code=code,
+            name=name,
+            module=module,
+            action=action,
+            description=description,
+        )
         db.add(permission)
         permissions[code] = permission
     db.flush()
@@ -63,6 +84,19 @@ def seed_rbac(db: Session) -> dict[str, Role]:
         roles[name] = role
     db.flush()
     return roles
+
+
+
+def create_role(db: Session, name: str, *, description: str | None = None, codes: list[str] | None = None) -> Role:
+    role = Role(name=name, description=description)
+    db.add(role)
+    db.flush()
+    if codes:
+        for code in codes:
+            permission = permission_by_code(db, code)
+            db.add(RolePermission(role_id=role.id, permission_id=permission.id))
+        db.flush()
+    return role
 
 
 def create_user(
@@ -107,6 +141,34 @@ def permission_by_code(db: Session, code: str) -> Permission:
     permission = db.scalars(select(Permission).where(Permission.code == code)).first()
     assert permission is not None
     return permission
+
+
+def create_invite(
+    db: Session,
+    *,
+    email: str,
+    invited_by: User,
+    roles: list[Role] | None = None,
+) -> Invite:
+    invite = Invite(
+        email=email,
+        invited_by_user_id=invited_by.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(invite)
+    db.flush()
+    for role in roles or []:
+        db.add(InviteRole(invite_id=invite.id, role_id=role.id))
+    db.flush()
+    return invite
+
+
+def active_invite_by_email(db: Session, email: str) -> Invite | None:
+    normalized = email.strip().lower()
+    invites = db.scalars(
+        select(Invite).where(Invite.consumed_at.is_(None), Invite.cancelled_at.is_(None))
+    ).all()
+    return next((invite for invite in invites if invite.email.strip().lower() == normalized), None)
 
 
 def auth_header(user: User) -> dict[str, str]:

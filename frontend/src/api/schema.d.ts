@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Exchange a Microsoft ID token for FlyAccounts tokens
-         * @description Validates the Microsoft ID token for the configured organizational tenant and SPA client id. Personal accounts and unknown directories are rejected and MUST NOT create a user. On success, upserts the user, bootstraps the initial admin assignment when the work email matches environment configuration, and returns an access JWT plus a refresh token.
+         * @description Validates the Microsoft ID token for the configured organizational tenant and SPA client id. Personal accounts and unknown directories are rejected and MUST NOT create a user. On success, upserts the user. If the work email matches an active invite (case-insensitive), copies invite roles onto the user, sets entryPath to invite, and consumes the invite. Otherwise a newly created user has entryPath organization. Then, if combined permissions still lack manage_users and the work email matches INITIAL_ADMIN_EMAIL, assigns the seeded System Admin role. Returns an access JWT plus a refresh token.
          */
         post: operations["exchangeMicrosoftToken"];
         delete?: never;
@@ -112,8 +112,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * People who have signed in with Microsoft
-         * @description Requires access_administration in the caller's combined permissions. Returns people who already have a User row (they have signed in). Inviting people who have never signed in is out of scope.
+         * Signed-in people and unused invites
+         * @description Requires manage_users in the caller's combined permissions. Returns a union of Users and active Invites. Unused invites have personType invite and status invited. Signed-in people have personType user and status pending or active.
          */
         get: operations["listPeople"];
         put?: never;
@@ -132,13 +132,37 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Existing roles that can be assigned
-         * @description Requires access_administration. Returns seeded (and any later) roles as data. This operation does not create or edit roles.
+         * Roles with attached permissions
+         * @description Requires manage_roles. Returns roles as data, including attached existing permissions. Creating permission types is not available on this operation.
          */
         get: operations["listRoles"];
         put?: never;
-        post?: never;
+        /**
+         * Create a role
+         * @description Requires manage_roles. Name is required and MUST be unique. Existing permissions are attached with a later call, not created here.
+         */
+        post: operations["createRole"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a signed-in person
+         * @description Requires manage_users. Removes a listed User and their role assignments. Refresh tokens for that person are revoked. Does not prevent a later organization-based sign-in by the same account. Refused when the change would leave zero signed-in people whose combined permissions include manage_users. Unused invites are cancelled with DELETE /people/invites/{inviteId}, not this operation.
+         */
+        delete: operations["removePerson"];
         options?: never;
         head?: never;
         patch?: never;
@@ -154,10 +178,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Assign an existing role
-         * @description Adds the role without replacing roles the person already has. Duplicate assignment is refused. Requires access_administration.
+         * Assign one or more existing roles
+         * @description Adds the roles without replacing roles the person already has. Duplicate assignment of any role is refused. Requires manage_users.
          */
-        post: operations["assignRole"];
+        post: operations["assignRoles"];
         delete?: never;
         options?: never;
         head?: never;
@@ -176,9 +200,173 @@ export interface paths {
         post?: never;
         /**
          * Revoke one assigned role
-         * @description Removes one assignment. Remaining roles stay. If none remain, the person has no roles (pending access on their next use). Refused when the change would leave zero people whose combined permissions include access_administration.
+         * @description Removes one assignment. Remaining roles stay. If none remain, the person has no roles (pending access on their next use). Refused when the change would leave zero signed-in people whose combined permissions include manage_users. Unused invites do not count as administrators.
          */
         delete: operations["revokeRole"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite a person by organizational work email
+         * @description Requires manage_users. Creates an unused invite with zero or more existing roles. The invited person cannot use the application until they sign in. Duplicate active invite of the same email is refused. Invite of an email that already belongs to a listed User is refused. Sending email is not part of this operation.
+         */
+        post: operations["createInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/invites/{inviteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel an unused invite
+         * @description Requires manage_users. Removes an unused invite from the list. Does not prevent a later organization-based sign-in by that email. Consumed invites cannot be cancelled.
+         */
+        delete: operations["cancelInvite"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/invites/{inviteId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign one or more existing roles to an unused invite
+         * @description Adds the roles without replacing roles the invite already has. Duplicate assignment of any role is refused. Requires manage_users.
+         */
+        post: operations["assignInviteRoles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/invites/{inviteId}/roles/{roleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke one role from an unused invite
+         * @description Removes one InviteRole. Remaining roles stay. Last-admin does not apply (unused invites cannot administer). Requires manage_users.
+         */
+        delete: operations["revokeInviteRole"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/{roleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete an unused role
+         * @description Requires manage_roles. Refused while any User or active Invite is assigned the role. Refused when deleting would leave zero signed-in people whose combined permissions include manage_users.
+         */
+        delete: operations["deleteRole"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a role name or description
+         * @description Requires manage_roles. Name MUST remain unique. Authorization still follows attached permissions, not the display name.
+         */
+        patch: operations["updateRole"];
+        trace?: never;
+    };
+    "/roles/{roleId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach an existing permission to a role
+         * @description Adds the permission without replacing permissions the role already has. Duplicate attach is refused. Creating permission types is not available. Requires manage_roles. Refused when the change would leave zero signed-in people with manage_users (does not apply to attach of a new grant).
+         */
+        post: operations["attachPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/{roleId}/permissions/{permissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Detach a permission from a role
+         * @description Remaining permissions stay. Every person assigned the role uses the updated combined set on their next request. Refused when the change would leave zero signed-in people whose combined permissions include manage_users. Requires manage_roles.
+         */
+        delete: operations["detachPermission"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Existing permission types
+         * @description Requires manage_permissions. Read-only catalog of permission types that roles may attach, grouped by module. Each row is module-level when action is omitted. Creating, renaming, or deleting permission types is not available.
+         */
+        get: operations["listPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -190,7 +378,7 @@ export interface components {
     schemas: {
         ErrorResponse: {
             /** @enum {string} */
-            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required";
+            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required" | "duplicate_invite" | "already_present" | "duplicate_role_name" | "role_still_assigned" | "duplicate_permission";
             message: string;
         };
         MicrosoftTokenRequest: {
@@ -216,6 +404,23 @@ export interface components {
             id: string;
             name: string;
             description?: string;
+        };
+        Permission: {
+            /** Format: uuid */
+            id: string;
+            /** @description Display label (Permission Name). */
+            name: string;
+            /** @description Stable key used in authorization checks. Exact match only. */
+            permission: string;
+            /** @description Optional human-readable explanation. */
+            description?: string;
+        };
+        Role: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string;
+            permissions: components["schemas"]["Permission"][];
         };
         LandingSection: {
             /** @description Permission code that allowed this section. */
@@ -247,21 +452,63 @@ export interface components {
             landing: components["schemas"]["Landing"];
         };
         Person: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description User.id when personType is user; Invite.id when invite.
+             */
             id: string;
-            displayName: string;
-            upn: string;
+            /** @enum {string} */
+            personType: "user" | "invite";
+            /** @description User.upn or Invite.email. */
+            email: string;
+            /** @description Present after sign-in; omitted for unused invites. */
+            displayName?: string;
+            /** @enum {string} */
+            status: "invited" | "pending" | "active";
+            /**
+             * @description How a signed-in User entered. Omitted for unused invites.
+             * @enum {string}
+             */
+            entryPath?: "invite" | "organization";
             roles: components["schemas"]["RoleSummary"][];
         };
         PeopleResponse: {
             people: components["schemas"]["Person"][];
         };
         RolesResponse: {
-            roles: components["schemas"]["RoleSummary"][];
+            roles: components["schemas"]["Role"][];
+        };
+        PermissionModuleGroup: {
+            /** @description Catalog grouping key (e.g. settings). Not an authorization key. */
+            module: string;
+            permissions: components["schemas"]["Permission"][];
+        };
+        PermissionsResponse: {
+            modules: components["schemas"]["PermissionModuleGroup"][];
         };
         AssignRoleRequest: {
+            roleIds: string[];
+        };
+        CreateInviteRequest: {
+            /** @description Organizational work email. Matching on sign-in is case-insensitive. */
+            email: string;
+            /**
+             * @description Existing roles to pre-assign. Empty means invite with no roles.
+             * @default []
+             */
+            roleIds: string[];
+        };
+        CreateRoleRequest: {
+            name: string;
+            description?: string;
+        };
+        UpdateRoleRequest: {
+            name?: string;
+            description?: string;
+        };
+        AttachPermissionRequest: {
             /** Format: uuid */
-            roleId: string;
+            permissionId: string;
         };
         StatusResponse: {
             /**
@@ -285,6 +532,8 @@ export interface components {
     parameters: {
         UserId: string;
         RoleId: string;
+        InviteId: string;
+        PermissionId: string;
     };
     requestBodies: never;
     headers: never;
@@ -477,7 +726,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Signed-in people and their assigned roles. */
+            /** @description People and unused invites with roles. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -495,7 +744,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -515,7 +764,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Assignable roles. */
+            /** @description Roles and their attached permissions. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -533,7 +782,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -544,7 +793,126 @@ export interface operations {
             };
         };
     };
-    assignRole: {
+    createRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created role with attached permissions (none yet). */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another role already uses this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "duplicate_role_name",
+                     *       "message": "A role with that name already exists."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    removePerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Person removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Person not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Would remove the last access-administration grant. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "last_admin_required",
+                     *       "message": "At least one person with manage_users must remain."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    assignRoles: {
         parameters: {
             query?: never;
             header?: never;
@@ -577,7 +945,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -642,7 +1010,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -669,9 +1037,529 @@ export interface operations {
                     /**
                      * @example {
                      *       "code": "last_admin_required",
-                     *       "message": "At least one person with access administration must remain."
+                     *       "message": "At least one person with manage_users must remain."
                      *     }
                      */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInviteRequest"];
+            };
+        };
+        responses: {
+            /** @description Invite recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Person"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A listed roleId was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Email already invited or already belongs to a listed person. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancelInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inviteId: components["parameters"]["InviteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invite cancelled. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Active unused invite not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    assignInviteRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inviteId: components["parameters"]["InviteId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Invite person after the assignment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Person"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invite or role not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The invite already has this role. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "duplicate_assignment",
+                     *       "message": "That role is already assigned."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revokeInviteRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inviteId: components["parameters"]["InviteId"];
+                roleId: components["parameters"]["RoleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invite person after the revoke. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Person"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invite, role, or assignment not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleId: components["parameters"]["RoleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Role not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Role is still assigned, or last access-administration path. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleId: components["parameters"]["RoleId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Role not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another role already uses this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "duplicate_role_name",
+                     *       "message": "A role with that name already exists."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    attachPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleId: components["parameters"]["RoleId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachPermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Role after the attach. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Role or permission not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The role already has this permission. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "duplicate_permission",
+                     *       "message": "That permission is already attached."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    detachPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleId: components["parameters"]["RoleId"];
+                permissionId: components["parameters"]["PermissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role after the detach. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Role, permission, or attachment not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Would remove the last access-administration grant. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "last_admin_required",
+                     *       "message": "At least one person with manage_users must remain."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing permissions, including module and optional action. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermissionsResponse"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };

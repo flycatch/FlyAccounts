@@ -1,0 +1,255 @@
+@import "./forms.css";
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.settings-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.settings-page h2,
+.settings-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+  font-size: 14px;
+}
+
+.settings-page p,
+.settings-page label {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.settings-subtitle {
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-subtitle);
+  color: var(--color-subtext);
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings-form-stack {
+  flex-direction: column;
+}
+
+.settings-form label:not(.ui-field) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-subtext);
+}
+
+.settings-primary:focus-visible,
+.settings-secondary:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.settings-primary {
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 12px;
+  padding: var(--control-padding-y) var(--control-padding-x);
+  min-height: var(--control-height);
+  height: var(--control-height);
+  cursor: pointer;
+}
+
+.settings-secondary {
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-subtext);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-nav);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  min-height: var(--control-height);
+  height: var(--control-height);
+  cursor: pointer;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: var(--space-1) 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: var(--text-nav);
+}
+
+.status-chip.is-active {
+  color: var(--color-status-paid);
+  background: var(--color-status-paid-bg);
+}
+
+.status-chip.is-pending,
+.status-chip.is-invited {
+  color: var(--color-status-pending);
+  background: var(--color-status-pending-bg);
+}
+
+.settings-detail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings-detail-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-box);
+}
+
+.settings-detail-list-label {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.settings-assign-label {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.settings-assign-empty {
+  color: var(--color-subtext);
+}
+
+.settings-role-multiselect {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings-role-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-black);
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+
+.settings-module-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-module-heading {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  color: var(--color-black);
+}
+
+.settings-permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.permission-card-description {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-subtext);
+}
+
+.permission-card-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.permission-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.permission-card-field dt {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-subtext);
+}
+
+.permission-card-field dd {
+  margin: 0;
+}
+
+.permission-card-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  color: var(--color-subtext);
+}
+
+@media (min-width: 768px) {
+  .settings-form:not(.settings-form-stack) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: end;
+  }
+
+  .settings-form:not(.settings-form-stack) label:not(.ui-field),
+  .settings-form:not(.settings-form-stack) .ui-field {
+    flex: 1 1 14rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .settings-permission-grid {
+    grid-template-columns: 1fr;
+  }
+}

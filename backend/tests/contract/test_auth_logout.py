@@ -42,7 +42,7 @@ def test_logout_revokes_refresh_family(client, db, monkeypatch):
 
 def test_logout_authorized_user(client, db):
     user = create_user(db)
-    assign_role(db, user, role_by_name(db, "HR User"))
+    assign_role(db, user, role_by_name(db, "Operator"))
     db.commit()
     response = client.post(
         "/v1/auth/logout",

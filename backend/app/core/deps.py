@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session
 import jwt
 
 from app.core.errors import forbidden, pending_access, unauthorized
-from app.core.permissions import ACCESS_ADMINISTRATION, load_assigned_roles, load_combined_permissions
+from app.core.permissions import (
+    MANAGE_PERMISSIONS,
+    MANAGE_ROLES,
+    MANAGE_USERS,
+    load_assigned_roles,
+    load_combined_permissions,
+)
 from app.core.security import verify_access_token
 from app.db.session import get_db
 from app.models import Role, User
@@ -52,7 +58,19 @@ def require_at_least_one_role(current: CurrentUser = Depends(get_current_user)) 
     return current
 
 
-def require_access_administration(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-    if ACCESS_ADMINISTRATION not in current.permissions:
+def _require_permission(current: CurrentUser, code: str) -> CurrentUser:
+    if code not in current.permissions:
         raise forbidden()
     return current
+
+
+def require_manage_users(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    return _require_permission(current, MANAGE_USERS)
+
+
+def require_manage_roles(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    return _require_permission(current, MANAGE_ROLES)
+
+
+def require_manage_permissions(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    return _require_permission(current, MANAGE_PERMISSIONS)

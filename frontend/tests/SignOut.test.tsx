@@ -15,8 +15,8 @@ vi.mock("../src/auth/msal", () => ({
 }));
 
 import App from "../src/App";
-import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, clearTokens, storeTokens } from "../src/auth/tokens";
-import { CombinedLandingPage } from "../src/pages/CombinedLandingPage";
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, clearTokens, signOut, storeTokens } from "../src/auth/tokens";
+import { AppShell } from "../src/layout/AppShell";
 import { PendingAccessPage } from "../src/pages/PendingAccessPage";
 
 describe("sign out", () => {
@@ -40,23 +40,22 @@ describe("sign out", () => {
     });
   });
 
-  it("clears tokens from the combined landing", async () => {
+  it("clears tokens from the app shell sidebar", async () => {
     storeTokens("access-1", "refresh-1");
     render(
-      <CombinedLandingPage
-        me={{
-          id: "00000000-0000-0000-0000-000000000002",
-          displayName: "Alex Example",
-          upn: "alex@contoso.com",
-          roles: [{ id: "role-hr", name: "HR User" }],
-          permissions: ["hr_landing"],
-          landing: {
-            accessState: "authorized",
-            sections: [{ code: "hr_landing", title: "HR", body: "HR" }],
-          },
+      <AppShell
+        pathname="/"
+        showSettings={false}
+        canUsers={false}
+        canRoles={false}
+        canPermissions={false}
+        onNavigate={() => undefined}
+        onSignOut={() => {
+          void signOut();
         }}
-        onSignedOut={() => undefined}
-      />,
+      >
+        <p>Home content</p>
+      </AppShell>,
     );
     fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
     await waitFor(() => {

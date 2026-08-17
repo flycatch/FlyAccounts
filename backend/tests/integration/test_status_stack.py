@@ -24,7 +24,7 @@ def test_status_against_compose_stack():
     db: Session = factory()
     try:
         user = create_user(db, upn="stack-status@contoso.com")
-        assign_role(db, user, role_by_name(db, "HR User"))
+        assign_role(db, user, role_by_name(db, "Operator"))
         db.commit()
         token = issue_access_token(user.id)
     finally:

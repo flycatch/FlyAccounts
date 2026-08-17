@@ -1,0 +1,77 @@
+import brandIcon from "../assets/icons/sms-tracking.svg";
+
+type SidebarProps = {
+  pathname: string;
+  showSettings: boolean;
+  canUsers: boolean;
+  canRoles: boolean;
+  canPermissions: boolean;
+  open?: boolean;
+  onNavigate: (path: string) => void;
+  onSignOut: () => void;
+};
+
+export function Sidebar({
+  pathname,
+  showSettings,
+  canUsers,
+  canRoles,
+  canPermissions,
+  open = false,
+  onNavigate,
+  onSignOut,
+}: SidebarProps) {
+  const homeActive = pathname === "/";
+  return (
+    <aside className={`app-shell-sidebar${open ? " is-open" : ""}`} id="app-sidebar">
+      <p className="app-shell-brand">
+        <img src={brandIcon} width={24} height={24} alt="" />
+        FlyAccounts
+      </p>
+      <nav className="app-shell-nav" aria-label="Application">
+        <button
+          type="button"
+          className={`app-shell-nav-item${homeActive ? " is-active" : ""}`}
+          onClick={() => onNavigate("/")}
+        >
+          Home
+        </button>
+        {showSettings ? (
+          <>
+            <p className="app-shell-nav-group">Settings</p>
+            {canUsers ? (
+              <button
+                type="button"
+                className={`app-shell-nav-item${pathname.startsWith("/settings/users") ? " is-active" : ""}`}
+                onClick={() => onNavigate("/settings/users")}
+              >
+                Users
+              </button>
+            ) : null}
+            {canRoles ? (
+              <button
+                type="button"
+                className={`app-shell-nav-item${pathname.startsWith("/settings/roles") ? " is-active" : ""}`}
+                onClick={() => onNavigate("/settings/roles")}
+              >
+                Roles
+              </button>
+            ) : null}
+            {canPermissions ? (
+              <button
+                type="button"
+                className={`app-shell-nav-item${pathname.startsWith("/settings/permissions") ? " is-active" : ""}`}
+                onClick={() => onNavigate("/settings/permissions")}
+              >
+                Permissions
+              </button>
+            ) : null}
+          </>
+        ) : null}
+      </nav>
+      <button type="button" className="app-shell-sign-out" onClick={onSignOut}>
+        Sign out
+      </button>
+    </aside>
+  );
+}

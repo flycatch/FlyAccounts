@@ -46,7 +46,7 @@ def test_status_matches_openapi_contract(client, db, monkeypatch):
     spec = yaml.safe_load(FEATURE_OPENAPI.read_text(encoding="utf-8"))
     schema = spec["components"]["schemas"]["StatusResponse"]
     user = create_user(db, upn="authorized@contoso.com")
-    assign_role(db, user, role_by_name(db, "HR User"))
+    assign_role(db, user, role_by_name(db, "Operator"))
     db.commit()
 
     response = client.get("/v1/status", headers=auth_header(user))

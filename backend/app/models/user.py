@@ -21,6 +21,7 @@ class User(Base):
     tenant_id: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     upn: Mapped[str] = mapped_column(String(255), nullable=False)
+    entry_path: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
@@ -29,3 +30,7 @@ class User(Base):
         foreign_keys="RoleAssignment.user_id",
     )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(back_populates="user")
+    invites_sent: Mapped[list["Invite"]] = relationship(
+        back_populates="invited_by",
+        foreign_keys="Invite.invited_by_user_id",
+    )

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.bootstrap import bootstrap_initial_admin, upsert_user
+from app.core.bootstrap import apply_entry_path, bootstrap_initial_admin, consume_invite, upsert_user
 from app.core.config import get_settings
 from app.core.deps import CurrentUser, get_current_user
 from app.core.errors import invalid_token
@@ -50,7 +50,9 @@ def _token_response(db: Session, user: User, refresh_token: str) -> dict:
 @router.post("/auth/microsoft")
 def exchange_microsoft_token(body: MicrosoftTokenRequest, db: Session = Depends(get_db)) -> dict:
     claims = validate_microsoft_id_token(body.id_token)
-    user = upsert_user(db, claims)
+    user, created = upsert_user(db, claims)
+    consumed = consume_invite(db, user, claims)
+    apply_entry_path(user, created, consumed)
     bootstrap_initial_admin(db, user, claims)
     raw_refresh, _row = persist_refresh_token(db, user.id)
     return _token_response(db, user, raw_refresh)

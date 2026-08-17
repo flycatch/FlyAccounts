@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import Permission, Role, RoleAssignment, RolePermission, User
 
-ACCESS_ADMINISTRATION = "access_administration"
+MANAGE_USERS = "manage_users"
+MANAGE_ROLES = "manage_roles"
+MANAGE_PERMISSIONS = "manage_permissions"
 
 
 def load_combined_permissions(db: Session, user_id: uuid.UUID) -> set[str]:
@@ -52,17 +54,63 @@ def users_with_permission(db: Session, code: str) -> set[uuid.UUID]:
     return set(rows)
 
 
-def would_remove_last_admin(db: Session, user_id: uuid.UUID, role_id: uuid.UUID) -> bool:
-    current_admins = users_with_permission(db, ACCESS_ADMINISTRATION)
-    remaining_codes = set(
-        db.scalars(
-            select(Permission.code)
-            .join(RolePermission, RolePermission.permission_id == Permission.id)
-            .join(RoleAssignment, RoleAssignment.role_id == RolePermission.role_id)
-            .where(RoleAssignment.user_id == user_id, RoleAssignment.role_id != role_id)
-        ).all()
+def _user_codes_excluding(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    exclude_role_id: uuid.UUID | None = None,
+    exclude_role_permission: tuple[uuid.UUID, uuid.UUID] | None = None,
+) -> set[str]:
+    query = (
+        select(Permission.code, RolePermission.role_id, RolePermission.permission_id)
+        .join(RolePermission, RolePermission.permission_id == Permission.id)
+        .join(RoleAssignment, RoleAssignment.role_id == RolePermission.role_id)
+        .where(RoleAssignment.user_id == user_id)
     )
+    codes: set[str] = set()
+    for code, role_id, permission_id in db.execute(query):
+        if exclude_role_id is not None and role_id == exclude_role_id:
+            continue
+        if exclude_role_permission is not None and (role_id, permission_id) == exclude_role_permission:
+            continue
+        codes.add(code)
+    return codes
+
+
+def would_remove_last_admin(db: Session, user_id: uuid.UUID, role_id: uuid.UUID) -> bool:
+    current_admins = users_with_permission(db, MANAGE_USERS)
     remaining_admins = set(current_admins)
-    if ACCESS_ADMINISTRATION not in remaining_codes:
+    if MANAGE_USERS not in _user_codes_excluding(db, user_id, exclude_role_id=role_id):
         remaining_admins.discard(user_id)
+    return len(remaining_admins) == 0
+
+
+def would_detach_leave_last_admin(db: Session, role_id: uuid.UUID, permission_id: uuid.UUID) -> bool:
+    current_admins = users_with_permission(db, MANAGE_USERS)
+    remaining_admins: set[uuid.UUID] = set()
+    for admin_id in current_admins:
+        remaining = _user_codes_excluding(
+            db,
+            admin_id,
+            exclude_role_permission=(role_id, permission_id),
+        )
+        if MANAGE_USERS in remaining:
+            remaining_admins.add(admin_id)
+    return len(remaining_admins) == 0
+
+
+def would_delete_role_leave_last_admin(db: Session, role_id: uuid.UUID) -> bool:
+    current_admins = users_with_permission(db, MANAGE_USERS)
+    remaining_admins: set[uuid.UUID] = set()
+    for admin_id in current_admins:
+        remaining = _user_codes_excluding(db, admin_id, exclude_role_id=role_id)
+        if MANAGE_USERS in remaining:
+            remaining_admins.add(admin_id)
+    return len(remaining_admins) == 0
+
+
+def would_remove_person_leave_last_admin(db: Session, user_id: uuid.UUID) -> bool:
+    current_admins = users_with_permission(db, MANAGE_USERS)
+    remaining_admins = set(current_admins)
+    remaining_admins.discard(user_id)
     return len(remaining_admins) == 0

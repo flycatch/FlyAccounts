@@ -1,0 +1,69 @@
+:root {
+  --color-primary: #5b89ff;
+  --color-secondary: #5b89ff;
+  --color-black: #2c2c2c;
+  --color-text: #030229;
+  --color-subtext: #696969;
+  --color-box: #f8f8f8;
+  --color-stroke: #ececec;
+  --color-page: #fafafa;
+  --color-surface: #ffffff;
+  --color-track: #eaeaea;
+  --color-nav-active: rgba(91, 137, 255, 0.1);
+  --color-status-paid: #07a104;
+  --color-status-paid-bg: #e1ffdc;
+  --color-status-pending: #e2b102;
+  --color-status-pending-bg: #fff5dc;
+  --color-danger: #c62828;
+  --color-danger-bg: #fdecea;
+
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Work Sans", system-ui, sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --text-nav: 12px;
+  --text-nav-group: 11px;
+  --text-body: 14px;
+  --text-label: 11px;
+  --text-page-title: 24px;
+  --text-subtitle: 14px;
+  --text-code: 12px;
+  --text-meta: 11px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --control-height: 44px;
+  --control-padding-x: 12px;
+  --control-padding-y: 8px;
+  --focus-ring: 2px solid var(--color-primary);
+
+  --sidebar-width: 223px;
+  --radius-control: 4px;
+  --radius-row: 10px;
+  --radius-pill: 33px;
+  --shadow-sidebar: 0 4px 40px rgba(207, 207, 207, 0.07);
+
+  --modal-overlay: rgba(44, 44, 44, 0.45);
+  --modal-radius: 8px;
+  --modal-shadow: 0 12px 40px rgba(44, 44, 44, 0.18);
+  --modal-max-width: 28rem;
+
+  --split-gap: var(--space-4);
+  --card-padding: var(--space-4);
+  --pill-height: 24px;
+  --pill-padding-x: 10px;
+  --pill-font-size: 12px;
+  --icon-button-size: 36px;
+  --tooltip-bg: #2c2c2c;
+  --tooltip-fg: #ffffff;
+  --tooltip-radius: 4px;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
