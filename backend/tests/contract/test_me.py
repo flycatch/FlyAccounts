@@ -58,3 +58,40 @@ def test_me_omits_sensitive_fields_without_permission(client, db):
     assert body["landing"]["sections"][0]["code"] == "hr_landing"
     assert "sensitiveFinancialFields" not in body["landing"]
     assert "view_sensitive_financial_fields" not in body["permissions"]
+
+
+def test_me_after_consumed_invite_returns_union(client, db):
+    from app.core.bootstrap import consume_invite, upsert_user
+    from tests.conftest import create_invite, create_user, role_by_name
+
+    admin = create_user(db, upn="admin@contoso.com")
+    create_invite(
+        db,
+        email="invited@contoso.com",
+        invited_by=admin,
+        roles=[role_by_name(db, "Finance User"), role_by_name(db, "HR User")],
+    )
+    db.commit()
+    claims = {
+        "oid": "oid-me-invite",
+        "tid": "11111111-1111-1111-1111-111111111111",
+        "name": "Invited Person",
+        "preferred_username": "invited@contoso.com",
+    }
+    user, _created = upsert_user(db, claims)
+    consume_invite(db, user, claims)
+    db.commit()
+
+    response = client.get("/v1/me", headers=auth_header(user))
+    assert response.status_code == 200
+    body = response.json()
+    assert {role["name"] for role in body["roles"]} == {"Finance User", "HR User"}
+    assert set(body["permissions"]) == {
+        "finance_landing",
+        "view_sensitive_financial_fields",
+        "hr_landing",
+    }
+    codes = {section["code"] for section in body["landing"]["sections"]}
+    assert codes == {"finance_landing", "hr_landing"}
+    assert "pmo_landing" not in codes
+    assert "sensitiveFinancialFields" in body["landing"]

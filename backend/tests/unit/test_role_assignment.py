@@ -44,3 +44,14 @@ def test_last_admin_uses_combined_permission_not_role_name(db):
     db.commit()
     assert would_remove_last_admin(db, admin.id, entity_admin.id) is False
     assert would_remove_last_admin(db, admin.id, role_by_name(db, "Finance User").id) is False
+
+
+def test_last_admin_ignores_unused_invites(db):
+    from tests.conftest import create_invite
+
+    admin = create_user(db, upn="admin@contoso.com")
+    entity_admin = role_by_name(db, "Entity Admin")
+    assign_role(db, admin, entity_admin)
+    create_invite(db, email="future-admin@contoso.com", invited_by=admin, roles=[entity_admin])
+    db.commit()
+    assert would_remove_last_admin(db, admin.id, entity_admin.id) is True

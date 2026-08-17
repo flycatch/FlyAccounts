@@ -69,6 +69,15 @@ def persist_refresh_token(
     return raw, row
 
 
+def revoke_refresh_tokens_for_user(db: Session, user_id: uuid.UUID) -> None:
+    families = {
+        row.family_id
+        for row in db.scalars(select(RefreshToken).where(RefreshToken.user_id == user_id)).all()
+    }
+    for family_id in families:
+        revoke_refresh_family(db, family_id)
+
+
 def revoke_refresh_family(db: Session, family_id: uuid.UUID) -> None:
     now = _utcnow()
     rows = db.scalars(select(RefreshToken).where(RefreshToken.family_id == family_id)).all()

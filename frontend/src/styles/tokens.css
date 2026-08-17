@@ -1,0 +1,24 @@
+:root {
+  --color-primary: #5b89ff;
+  --color-secondary: #5b89ff;
+  --color-black: #2c2c2c;
+  --color-text: #030229;
+  --color-subtext: #696969;
+  --color-box: #f8f8f8;
+  --color-stroke: #ececec;
+  --color-page: #fafafa;
+  --color-surface: #ffffff;
+  --color-track: #eaeaea;
+  --color-nav-active: rgba(91, 137, 255, 0.1);
+  --color-status-paid: #07a104;
+  --color-status-paid-bg: #e1ffdc;
+  --color-status-pending: #e2b102;
+  --color-status-pending-bg: #fff5dc;
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Work Sans", system-ui, sans-serif;
+  --sidebar-width: 223px;
+  --radius-control: 4px;
+  --radius-row: 10px;
+  --radius-pill: 33px;
+  --shadow-sidebar: 0 4px 40px rgba(207, 207, 207, 0.07);
+}

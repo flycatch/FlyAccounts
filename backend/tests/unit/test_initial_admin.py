@@ -21,7 +21,7 @@ def test_initial_admin_match_is_case_insensitive(db, monkeypatch):
     from app.core.config import get_settings
 
     get_settings.cache_clear()
-    user = upsert_user(db, _claims(preferred_username="ADMIN@contoso.com"))
+    user, _created = upsert_user(db, _claims(preferred_username="ADMIN@contoso.com"))
     bootstrap_initial_admin(db, user, _claims(preferred_username="ADMIN@contoso.com"))
     db.commit()
     assert "access_administration" in load_combined_permissions(db, user.id)
@@ -34,7 +34,7 @@ def test_initial_admin_matches_email_claim(db, monkeypatch):
 
     get_settings.cache_clear()
     claims = _claims(preferred_username="pat@contoso.com", email="admin@contoso.com")
-    user = upsert_user(db, claims)
+    user, _created = upsert_user(db, claims)
     bootstrap_initial_admin(db, user, claims)
     db.commit()
     assert "access_administration" in load_combined_permissions(db, user.id)
@@ -47,7 +47,7 @@ def test_initial_admin_assigns_once(db, monkeypatch):
 
     get_settings.cache_clear()
     claims = _claims()
-    user = upsert_user(db, claims)
+    user, _created = upsert_user(db, claims)
     bootstrap_initial_admin(db, user, claims)
     bootstrap_initial_admin(db, user, claims)
     db.commit()
@@ -62,7 +62,7 @@ def test_no_match_stays_pending(db, monkeypatch):
 
     get_settings.cache_clear()
     claims = _claims(oid="oid-other", preferred_username="other@contoso.com")
-    user = upsert_user(db, claims)
+    user, _created = upsert_user(db, claims)
     bootstrap_initial_admin(db, user, claims)
     db.commit()
     assert load_combined_permissions(db, user.id) == set()

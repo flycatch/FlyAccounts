@@ -41,6 +41,14 @@ describe("CombinedLandingPage", () => {
     expect(screen.getByText("Margin: 250.00")).toBeInTheDocument();
   });
 
+  it("lists every assigned role after invited sign-in and omits unpermitted sections", () => {
+    render(<CombinedLandingPage me={baseMe} onSignedOut={() => undefined} />);
+    expect(screen.getByText("Finance User")).toBeInTheDocument();
+    expect(screen.getByText("HR User")).toBeInTheDocument();
+    expect(screen.queryByText("PMO User")).not.toBeInTheDocument();
+    expect(screen.queryByText("PMO")).not.toBeInTheDocument();
+  });
+
   it("does not invent cost and margin when the payload omits them", () => {
     const me = {
       ...baseMe,

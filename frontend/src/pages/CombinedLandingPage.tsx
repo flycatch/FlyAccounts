@@ -7,11 +7,10 @@ type MeResponse = components["schemas"]["MeResponse"];
 
 type CombinedLandingPageProps = {
   me: MeResponse;
-  onOpenAdmin?: () => void;
   onSignedOut: () => void;
 };
 
-export function CombinedLandingPage({ me, onOpenAdmin, onSignedOut }: CombinedLandingPageProps) {
+export function CombinedLandingPage({ me, onSignedOut }: CombinedLandingPageProps) {
   const sensitive = me.landing.sensitiveFinancialFields;
 
   async function handleSignOut() {
@@ -20,18 +19,13 @@ export function CombinedLandingPage({ me, onOpenAdmin, onSignedOut }: CombinedLa
   }
 
   return (
-    <main className="app-page combined-landing-page">
+    <section className="app-page combined-landing-page">
       <header className="landing-header">
         <div>
           <h1>FlyAccounts</h1>
           <p>{me.displayName}</p>
         </div>
         <div className="landing-actions">
-          {onOpenAdmin ? (
-            <button type="button" onClick={onOpenAdmin}>
-              Access administration
-            </button>
-          ) : null}
           <button type="button" onClick={() => void handleSignOut()}>
             Sign out
           </button>
@@ -63,6 +57,6 @@ export function CombinedLandingPage({ me, onOpenAdmin, onSignedOut }: CombinedLa
         </section>
       ) : null}
       <StatusPage />
-    </main>
+    </section>
   );
 }

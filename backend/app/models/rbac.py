@@ -19,6 +19,8 @@ class Permission(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    module: Mapped[str] = mapped_column(String(64), nullable=False)
+    action: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     role_permissions: Mapped[list["RolePermission"]] = relationship(back_populates="permission")
 
@@ -32,6 +34,7 @@ class Role(Base):
 
     role_permissions: Mapped[list["RolePermission"]] = relationship(back_populates="role")
     role_assignments: Mapped[list["RoleAssignment"]] = relationship(back_populates="role")
+    invite_roles: Mapped[list["InviteRole"]] = relationship(back_populates="role")
 
 
 class RolePermission(Base):

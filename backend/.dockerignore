@@ -5,6 +5,8 @@ __pycache__
 tests
 *.egg-info
 .git
+Dockerfile*
+.dockerignore
 *.log
 *.log*
 .env

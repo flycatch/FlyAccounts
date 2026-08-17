@@ -2,32 +2,34 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { components } from "./api/schema";
 import { apiClient } from "./api/client";
-import { getAccessToken, getRefreshToken } from "./auth/tokens";
-import { AccessAdminPage } from "./pages/AccessAdminPage";
+import { getAccessToken, getRefreshToken, signOut } from "./auth/tokens";
+import { AppShell, type SettingsView } from "./layout/AppShell";
 import { CombinedLandingPage } from "./pages/CombinedLandingPage";
 import { PendingAccessPage } from "./pages/PendingAccessPage";
 import { SignInPage } from "./pages/SignInPage";
+import { PermissionsPage } from "./pages/settings/PermissionsPage";
+import { RolesPage } from "./pages/settings/RolesPage";
+import { UsersPage } from "./pages/settings/UsersPage";
 import "./pages/SignInPage.css";
 
 type MeResponse = components["schemas"]["MeResponse"];
-type View = "landing" | "admin";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<MeResponse | null>(null);
-  const [view, setView] = useState<View>("landing");
+  const [view, setView] = useState<SettingsView>("home");
 
   const loadSession = useCallback(async () => {
     if (!getAccessToken() && !getRefreshToken()) {
       setMe(null);
-      setView("landing");
+      setView("home");
       setLoading(false);
       return;
     }
     const { data, error, response } = await apiClient.GET("/me");
     if (error || !response.ok || !data) {
       setMe(null);
-      setView("landing");
+      setView("home");
       setLoading(false);
       return;
     }
@@ -38,6 +40,12 @@ export default function App() {
   useEffect(() => {
     void loadSession();
   }, [loadSession]);
+
+  async function handleSignOut() {
+    await signOut();
+    setView("home");
+    await loadSession();
+  }
 
   if (loading) {
     return (
@@ -56,28 +64,28 @@ export default function App() {
     return <PendingAccessPage onSignedOut={() => void loadSession()} />;
   }
 
-  if (view === "admin" && me.permissions.includes("access_administration")) {
-    return (
-      <AccessAdminPage
-        onBack={() => {
-          setView("landing");
-          void loadSession();
-        }}
-      />
-    );
-  }
+  const canOpenSettings = me.permissions.includes("access_administration");
+  const current = canOpenSettings ? view : "home";
 
   return (
-    <CombinedLandingPage
-      me={me}
-      onOpenAdmin={
-        me.permissions.includes("access_administration")
-          ? () => {
-              setView("admin");
-            }
-          : undefined
-      }
-      onSignedOut={() => void loadSession()}
-    />
+    <AppShell
+      current={current}
+      showSettings={canOpenSettings}
+      onNavigate={(next) => {
+        if (next !== "home" && !canOpenSettings) {
+          setView("home");
+          return;
+        }
+        setView(next);
+      }}
+      onSignOut={() => void handleSignOut()}
+    >
+      {current === "users" ? <UsersPage /> : null}
+      {current === "roles" ? <RolesPage /> : null}
+      {current === "permissions" ? <PermissionsPage /> : null}
+      {current === "home" ? (
+        <CombinedLandingPage me={me} onSignedOut={() => void handleSignOut()} />
+      ) : null}
+    </AppShell>
   );
 }

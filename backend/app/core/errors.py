@@ -12,6 +12,11 @@ ERROR_PENDING_ACCESS = "pending_access"
 ERROR_NOT_FOUND = "not_found"
 ERROR_DUPLICATE_ASSIGNMENT = "duplicate_assignment"
 ERROR_LAST_ADMIN_REQUIRED = "last_admin_required"
+ERROR_DUPLICATE_INVITE = "duplicate_invite"
+ERROR_ALREADY_PRESENT = "already_present"
+ERROR_DUPLICATE_ROLE_NAME = "duplicate_role_name"
+ERROR_DUPLICATE_PERMISSION = "duplicate_permission"
+ERROR_ROLE_STILL_ASSIGNED = "role_still_assigned"
 
 
 class ApiError(Exception):
@@ -58,6 +63,26 @@ def last_admin_required(
     message: str = "At least one person with access administration must remain.",
 ) -> ApiError:
     return ApiError(409, ERROR_LAST_ADMIN_REQUIRED, message)
+
+
+def duplicate_invite(message: str = "That email already has an active invite.") -> ApiError:
+    return ApiError(409, ERROR_DUPLICATE_INVITE, message)
+
+
+def already_present(message: str = "That email already belongs to a listed person.") -> ApiError:
+    return ApiError(409, ERROR_ALREADY_PRESENT, message)
+
+
+def duplicate_role_name(message: str = "A role with that name already exists.") -> ApiError:
+    return ApiError(409, ERROR_DUPLICATE_ROLE_NAME, message)
+
+
+def duplicate_permission(message: str = "That permission is already attached to the role.") -> ApiError:
+    return ApiError(409, ERROR_DUPLICATE_PERMISSION, message)
+
+
+def role_still_assigned(message: str = "That role is still assigned to a person.") -> ApiError:
+    return ApiError(409, ERROR_ROLE_STILL_ASSIGNED, message)
 
 
 async def api_error_handler(_request: Request, exc: ApiError) -> JSONResponse:

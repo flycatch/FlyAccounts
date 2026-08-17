@@ -1,0 +1,132 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  background: var(--color-page);
+  color: var(--color-black);
+  font-family: var(--font-body);
+}
+
+.app-shell-sidebar {
+  box-sizing: border-box;
+  width: var(--sidebar-width);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sidebar);
+  padding: 26px 13px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app-shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--color-black);
+}
+
+.app-shell-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.app-shell-nav-group {
+  margin: 0;
+  padding: 0 24px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-black);
+}
+
+.app-shell-nav-item {
+  box-sizing: border-box;
+  height: 40px;
+  padding: 12px 24px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+
+.app-shell-nav-item.is-active {
+  background: var(--color-nav-active);
+  font-weight: 600;
+}
+
+.app-shell-nav-item:focus-visible,
+.app-shell-toggle:focus-visible,
+.app-shell-sign-out:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.app-shell-toggle {
+  display: none;
+  font-family: var(--font-body);
+  font-size: 12px;
+  min-height: 2.75rem;
+  padding: 8px 12px;
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-subtext);
+}
+
+.app-shell-main {
+  flex: 1;
+  min-width: 0;
+  padding: 26px 24px 32px;
+}
+
+.app-shell-sign-out {
+  margin-top: auto;
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-subtext);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  padding: 8px 12px;
+  min-height: 30px;
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .app-shell-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin: 16px 16px 0;
+  }
+
+  .app-shell-sidebar {
+    width: 100%;
+    box-shadow: none;
+    border-bottom: 0.8px solid var(--color-stroke);
+    display: none;
+    padding: 16px;
+  }
+
+  .app-shell-sidebar.is-open {
+    display: flex;
+  }
+
+  .app-shell-main {
+    padding: 16px;
+  }
+}

@@ -3,6 +3,8 @@ dist
 coverage
 .vite
 .git
+Dockerfile*
+.dockerignore
 *.log
 *.log*
 .env

@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "generate:api": "openapi-typescript ../specs/002-microsoft-auth-rbac/contracts/openapi.yaml -o src/api/schema.d.ts"
+    "generate:api": "openapi-typescript ../specs/003-user-management/contracts/openapi.yaml -o src/api/schema.d.ts"
   },
   "dependencies": {
     "@azure/msal-browser": "^4.15.0",

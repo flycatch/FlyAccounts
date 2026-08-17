@@ -1,6 +1,8 @@
 # FlyAccounts
 
-FlyAccounts requires an organizational Microsoft work or school account before anyone can use the application. Microsoft proves identity only. Roles are assigned inside the app. A signed-in person with no roles sees pending access; a person with one or more roles sees a combined landing. The working-and-connected confirmation is available after sign-in on that landing, not as a public home.
+FlyAccounts requires an organizational Microsoft work or school account before anyone can use the application. Microsoft proves identity only. Roles and permissions are assigned inside the app.
+
+People may be **invited** by organizational work email, or they may sign in with a valid organizational Microsoft account **without an invite**. A signed-in person with no roles sees pending access; a person with one or more roles sees a combined landing (Home). Settings → Users / Roles / Permissions replaces the previous standalone access-administration screen.
 
 ## Stack
 
@@ -11,7 +13,7 @@ FlyAccounts requires an organizational Microsoft work or school account before a
 
 ## Layout
 
-- `frontend/` — sign-in, pending access, combined landing, and access administration
+- `frontend/` — sign-in, pending access, combined landing (Home), and Settings (Users, Roles, Permissions)
 - `backend/` — the API that implements the published contract
 - `deployment/` — shared Docker Compose and environment files
 
@@ -42,5 +44,6 @@ Never commit `deployment/.env`. Use `deployment/.env.example` as the template. T
 
 ## Links
 
-- Validation walkthrough: [specs/002-microsoft-auth-rbac/quickstart.md](specs/002-microsoft-auth-rbac/quickstart.md)
-- API contract (single source of truth): [specs/002-microsoft-auth-rbac/contracts/openapi.yaml](specs/002-microsoft-auth-rbac/contracts/openapi.yaml)
+- Validation walkthrough: [specs/003-user-management/quickstart.md](specs/003-user-management/quickstart.md)
+- API contract (single source of truth): [specs/003-user-management/contracts/openapi.yaml](specs/003-user-management/contracts/openapi.yaml)
+- Settings chrome and tokens: [specs/003-user-management/ui-spec.md](specs/003-user-management/ui-spec.md)
