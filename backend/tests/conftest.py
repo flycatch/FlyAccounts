@@ -20,40 +20,43 @@ from app.models import Base, Invite, InviteRole, Permission, Role, RoleAssignmen
 FEATURE_OPENAPI = (
     Path(__file__).resolve().parents[2]
     / "specs"
-    / "003-user-management"
+    / "004-settings-routes-rbac"
     / "contracts"
     / "openapi.yaml"
 )
 
 PERMISSION_SEED = [
     (
-        "access_administration",
-        "Access administration",
+        "manage_users",
+        "Manage users",
         "settings",
         None,
-        "Open Settings and manage people, roles, and assignments.",
+        "Open Settings → Users and manage people, invites, and role assignments.",
     ),
     (
-        "view_sensitive_financial_fields",
-        "View sensitive financial fields",
-        "finance",
-        "view_sensitive_financial_fields",
-        "View cost, margin, and other sensitive financial fields.",
+        "manage_roles",
+        "Manage roles",
+        "settings",
+        None,
+        "Open Settings → Roles and create, edit, or delete roles and attach permissions.",
     ),
-    ("finance_landing", "Finance landing", "finance", None, "Open the finance landing."),
-    ("hr_landing", "HR landing", "hr", None, "Open the HR landing."),
-    ("pmo_landing", "PMO landing", "pmo", None, "Open the PMO landing."),
+    (
+        "manage_permissions",
+        "Manage permissions",
+        "settings",
+        None,
+        "Open Settings → Permissions and view the permission catalog.",
+    ),
 ]
 
 ROLE_SEED = [
-    ("Entity Admin", "Assign and revoke existing roles", ["access_administration"]),
     (
-        "Finance User",
-        "Finance landing and sensitive financial fields",
-        ["view_sensitive_financial_fields", "finance_landing"],
+        "System Admin",
+        "Manage users, roles, and permissions",
+        ["manage_users", "manage_roles", "manage_permissions"],
     ),
-    ("HR User", "HR landing", ["hr_landing"]),
-    ("PMO User", "PMO landing", ["pmo_landing"]),
+    ("Member", "General member with no settings permissions", []),
+    ("Operator", "Operator with no settings permissions", []),
 ]
 
 
@@ -81,6 +84,19 @@ def seed_rbac(db: Session) -> dict[str, Role]:
         roles[name] = role
     db.flush()
     return roles
+
+
+
+def create_role(db: Session, name: str, *, description: str | None = None, codes: list[str] | None = None) -> Role:
+    role = Role(name=name, description=description)
+    db.add(role)
+    db.flush()
+    if codes:
+        for code in codes:
+            permission = permission_by_code(db, code)
+            db.add(RolePermission(role_id=role.id, permission_id=permission.id))
+        db.flush()
+    return role
 
 
 def create_user(

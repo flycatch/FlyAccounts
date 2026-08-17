@@ -3,9 +3,9 @@ from tests.conftest import assign_role, auth_header, create_user, permission_by_
 
 def test_create_patch_attach_detach_role(client, db):
     admin = create_user(db, upn="admin@contoso.com")
-    assign_role(db, admin, role_by_name(db, "Entity Admin"))
-    hr = permission_by_code(db, "hr_landing")
-    pmo = permission_by_code(db, "pmo_landing")
+    assign_role(db, admin, role_by_name(db, "System Admin"))
+    manage_roles = permission_by_code(db, "manage_roles")
+    manage_permissions = permission_by_code(db, "manage_permissions")
     db.commit()
     headers = auth_header(admin)
 
@@ -22,30 +22,42 @@ def test_create_patch_attach_detach_role(client, db):
     assert patched.status_code == 200
     assert patched.json()["name"] == "Operations"
 
-    attached = client.post(f"/v1/roles/{role_id}/permissions", headers=headers, json={"permissionId": str(hr.id)})
+    attached = client.post(
+        f"/v1/roles/{role_id}/permissions",
+        headers=headers,
+        json={"permissionId": str(manage_roles.id)},
+    )
     assert attached.status_code == 200
-    client.post(f"/v1/roles/{role_id}/permissions", headers=headers, json={"permissionId": str(pmo.id)})
-    again = client.post(f"/v1/roles/{role_id}/permissions", headers=headers, json={"permissionId": str(hr.id)})
+    client.post(
+        f"/v1/roles/{role_id}/permissions",
+        headers=headers,
+        json={"permissionId": str(manage_permissions.id)},
+    )
+    again = client.post(
+        f"/v1/roles/{role_id}/permissions",
+        headers=headers,
+        json={"permissionId": str(manage_roles.id)},
+    )
     assert again.status_code == 409
     assert again.json()["code"] == "duplicate_permission"
 
-    detached = client.delete(f"/v1/roles/{role_id}/permissions/{pmo.id}", headers=headers)
+    detached = client.delete(f"/v1/roles/{role_id}/permissions/{manage_permissions.id}", headers=headers)
     assert detached.status_code == 200
-    assert {row["code"] for row in detached.json()["permissions"]} == {"hr_landing"}
+    assert {row["permission"] for row in detached.json()["permissions"]} == {"manage_roles"}
 
 
 def test_role_crud_forbidden_and_last_admin_detach(client, db):
     admin = create_user(db, upn="admin@contoso.com")
-    entity_admin = role_by_name(db, "Entity Admin")
-    assign_role(db, admin, entity_admin)
-    hr_user = create_user(db, upn="hr@contoso.com")
-    assign_role(db, hr_user, role_by_name(db, "HR User"))
-    access = permission_by_code(db, "access_administration")
+    system_admin = role_by_name(db, "System Admin")
+    assign_role(db, admin, system_admin)
+    member = create_user(db, upn="member@contoso.com")
+    assign_role(db, member, role_by_name(db, "Member"))
+    access = permission_by_code(db, "manage_users")
     db.commit()
 
-    assert client.post("/v1/roles", headers=auth_header(hr_user), json={"name": "Nope"}).status_code == 403
+    assert client.post("/v1/roles", headers=auth_header(member), json={"name": "Nope"}).status_code == 403
     detach = client.delete(
-        f"/v1/roles/{entity_admin.id}/permissions/{access.id}",
+        f"/v1/roles/{system_admin.id}/permissions/{access.id}",
         headers=auth_header(admin),
     )
     assert detach.status_code == 409

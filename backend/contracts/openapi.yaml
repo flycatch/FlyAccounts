@@ -9,11 +9,11 @@ info:
     MUST NOT use unofficial endpoints or hand-written parallel auth, people,
     or role shapes. FastAPI auto-generated OpenAPI is not the contract.
 
-    Breaking change from 2.0.0: GET /people includes unused invites; roles
-    may be created and edited; GET /permissions is a read-only catalog.
-    Invite is optional. Organizational Microsoft sign-in without an invite
-    still succeeds. Permission types cannot be created here.
-  version: 3.0.0
+    Breaking change from 3.0.0: Settings gated by manage_users / manage_roles /
+    manage_permissions; GET /permissions returns modules[]; catalog items use
+    name/permission/description; assign roles accepts roleIds[]; seeds are
+    System Admin plus those three permissions only. Invite does not send email.
+  version: 4.0.0
 servers:
   - url: /v1
     description: Versioned API prefix
@@ -34,9 +34,9 @@ paths:
         If the work email matches an active invite (case-insensitive), copies
         invite roles onto the user, sets entryPath to invite, and consumes
         the invite. Otherwise a newly created user has entryPath organization.
-        Then, if combined permissions still lack access_administration and
-        the work email matches INITIAL_ADMIN_EMAIL, assigns the seeded admin
-        role. Returns an access JWT plus a refresh token.
+        Then, if combined permissions still lack manage_users and
+        the work email matches INITIAL_ADMIN_EMAIL, assigns the seeded System
+        Admin role. Returns an access JWT plus a refresh token.
       tags:
         - Auth
       security: []
@@ -250,7 +250,7 @@ paths:
       operationId: listPeople
       summary: Signed-in people and unused invites
       description: >
-        Requires access_administration in the caller's combined permissions.
+        Requires manage_users in the caller's combined permissions.
         Returns a union of Users and active Invites. Unused invites have
         personType invite and status invited. Signed-in people have
         personType user and status pending or active.
@@ -272,7 +272,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -283,7 +283,7 @@ paths:
       operationId: listRoles
       summary: Roles with attached permissions
       description: >
-        Requires access_administration. Returns roles as data, including
+        Requires manage_roles. Returns roles as data, including
         attached existing permissions. Creating permission types is not
         available on this operation.
       tags:
@@ -304,7 +304,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -313,7 +313,7 @@ paths:
       operationId: createRole
       summary: Create a role
       description: >
-        Requires access_administration. Name is required and MUST be unique.
+        Requires manage_roles. Name is required and MUST be unique.
         Existing permissions are attached with a later call, not created here.
       tags:
         - Settings
@@ -339,7 +339,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -359,11 +359,11 @@ paths:
       operationId: removePerson
       summary: Remove a signed-in person
       description: >
-        Requires access_administration. Removes a listed User and their
+        Requires manage_users. Removes a listed User and their
         role assignments. Refresh tokens for that person are revoked. Does
         not prevent a later organization-based sign-in by the same account.
         Refused when the change would leave zero signed-in people whose
-        combined permissions include access_administration. Unused invites
+        combined permissions include manage_users. Unused invites
         are cancelled with DELETE /people/invites/{inviteId}, not this
         operation.
       tags:
@@ -382,7 +382,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -401,15 +401,15 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 code: last_admin_required
-                message: At least one person with access administration must remain.
+                message: At least one person with manage_users must remain.
 
   /people/{userId}/roles:
     post:
-      operationId: assignRole
-      summary: Assign an existing role
+      operationId: assignRoles
+      summary: Assign one or more existing roles
       description: >
-        Adds the role without replacing roles the person already has.
-        Duplicate assignment is refused. Requires access_administration.
+        Adds the roles without replacing roles the person already has.
+        Duplicate assignment of any role is refused. Requires manage_users.
       tags:
         - Settings
       security:
@@ -436,7 +436,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -465,7 +465,7 @@ paths:
         Removes one assignment. Remaining roles stay. If none remain, the
         person has no roles (pending access on their next use). Refused when
         the change would leave zero signed-in people whose combined
-        permissions include access_administration. Unused invites do not
+        permissions include manage_users. Unused invites do not
         count as administrators.
       tags:
         - Settings
@@ -488,7 +488,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -507,14 +507,14 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 code: last_admin_required
-                message: At least one person with access administration must remain.
+                message: At least one person with manage_users must remain.
 
   /people/invites:
     post:
       operationId: createInvite
       summary: Invite a person by organizational work email
       description: >
-        Requires access_administration. Creates an unused invite with zero
+        Requires manage_users. Creates an unused invite with zero
         or more existing roles. The invited person cannot use the application
         until they sign in. Duplicate active invite of the same email is
         refused. Invite of an email that already belongs to a listed User
@@ -543,7 +543,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -575,7 +575,7 @@ paths:
       operationId: cancelInvite
       summary: Cancel an unused invite
       description: >
-        Requires access_administration. Removes an unused invite from the
+        Requires manage_users. Removes an unused invite from the
         list. Does not prevent a later organization-based sign-in by that
         email. Consumed invites cannot be cancelled.
       tags:
@@ -594,7 +594,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -608,11 +608,11 @@ paths:
 
   /people/invites/{inviteId}/roles:
     post:
-      operationId: assignInviteRole
-      summary: Assign an existing role to an unused invite
+      operationId: assignInviteRoles
+      summary: Assign one or more existing roles to an unused invite
       description: >
-        Adds the role without replacing roles the invite already has.
-        Duplicate assignment is refused. Requires access_administration.
+        Adds the roles without replacing roles the invite already has.
+        Duplicate assignment of any role is refused. Requires manage_users.
       tags:
         - Settings
       security:
@@ -639,7 +639,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -666,7 +666,7 @@ paths:
       summary: Revoke one role from an unused invite
       description: >
         Removes one InviteRole. Remaining roles stay. Last-admin does not
-        apply (unused invites cannot administer). Requires access_administration.
+        apply (unused invites cannot administer). Requires manage_users.
       tags:
         - Settings
       security:
@@ -688,7 +688,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -705,7 +705,7 @@ paths:
       operationId: updateRole
       summary: Change a role name or description
       description: >
-        Requires access_administration. Name MUST remain unique. Authorization
+        Requires manage_roles. Name MUST remain unique. Authorization
         still follows attached permissions, not the display name.
       tags:
         - Settings
@@ -733,7 +733,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -757,10 +757,10 @@ paths:
       operationId: deleteRole
       summary: Delete an unused role
       description: >
-        Requires access_administration. Refused while any User or active
+        Requires manage_roles. Refused while any User or active
         Invite is assigned the role. Refused when deleting would leave zero
         signed-in people whose combined permissions include
-        access_administration.
+        manage_users.
       tags:
         - Settings
       security:
@@ -777,7 +777,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -802,7 +802,7 @@ paths:
                 lastAdmin:
                   value:
                     code: last_admin_required
-                    message: At least one person with access administration must remain.
+                    message: At least one person with manage_users must remain.
 
   /roles/{roleId}/permissions:
     post:
@@ -811,8 +811,8 @@ paths:
       description: >
         Adds the permission without replacing permissions the role already
         has. Duplicate attach is refused. Creating permission types is not
-        available. Requires access_administration. Refused when the change
-        would leave zero signed-in people with access_administration (does
+        available. Requires manage_roles. Refused when the change
+        would leave zero signed-in people with manage_users (does
         not apply to attach of a new grant).
       tags:
         - Settings
@@ -840,7 +840,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -869,7 +869,7 @@ paths:
         Remaining permissions stay. Every person assigned the role uses the
         updated combined set on their next request. Refused when the change
         would leave zero signed-in people whose combined permissions include
-        access_administration. Requires access_administration.
+        manage_users. Requires manage_roles.
       tags:
         - Settings
       security:
@@ -891,7 +891,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -910,14 +910,14 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 code: last_admin_required
-                message: At least one person with access administration must remain.
+                message: At least one person with manage_users must remain.
 
   /permissions:
     get:
       operationId: listPermissions
       summary: Existing permission types
       description: >
-        Requires access_administration. Read-only catalog of permission
+        Requires manage_permissions. Read-only catalog of permission
         types that roles may attach, grouped by module. Each row is
         module-level when action is omitted. Creating, renaming, or
         deleting permission types is not available.
@@ -939,7 +939,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include access_administration.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -1069,33 +1069,21 @@ components:
       additionalProperties: false
       required:
         - id
-        - code
         - name
-        - module
+        - permission
       properties:
         id:
           type: string
           format: uuid
-        code:
-          type: string
-          description: Stable code used in authorization checks. Exact match only.
         name:
           type: string
-          description: Display label.
-        module:
+          description: Display label (Permission Name).
+        permission:
           type: string
-          description: >
-            Module this permission belongs to (e.g. settings, finance, hr, pmo).
-            Not a closed enum. Catalog grouping only; not an authorization key.
-        action:
-          type: string
-          description: >
-            Omitted or null means a whole-module grant. Later rows may set a
-            more specific action (e.g. create, view). A module-level grant
-            does not imply child codes.
+          description: Stable key used in authorization checks. Exact match only.
         description:
           type: string
-          description: Optional human-readable explanation shown in the Permissions catalog.
+          description: Optional human-readable explanation.
     Role:
       type: object
       additionalProperties: false
@@ -1243,25 +1231,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Role"
-    PermissionsResponse:
+    PermissionModuleGroup:
       type: object
       additionalProperties: false
       required:
+        - module
         - permissions
       properties:
+        module:
+          type: string
+          description: Catalog grouping key (e.g. settings). Not an authorization key.
         permissions:
           type: array
           items:
             $ref: "#/components/schemas/Permission"
+    PermissionsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - modules
+      properties:
+        modules:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionModuleGroup"
     AssignRoleRequest:
       type: object
       additionalProperties: false
       required:
-        - roleId
+        - roleIds
       properties:
-        roleId:
-          type: string
-          format: uuid
+        roleIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
     CreateInviteRequest:
       type: object
       additionalProperties: false

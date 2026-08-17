@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import type { components } from "./api/schema";
 import { apiClient } from "./api/client";
 import { getAccessToken, getRefreshToken, signOut } from "./auth/tokens";
-import { AppShell, type SettingsView } from "./layout/AppShell";
+import { AppShell } from "./layout/AppShell";
 import { CombinedLandingPage } from "./pages/CombinedLandingPage";
 import { PendingAccessPage } from "./pages/PendingAccessPage";
 import { SignInPage } from "./pages/SignInPage";
@@ -14,22 +15,84 @@ import "./pages/SignInPage.css";
 
 type MeResponse = components["schemas"]["MeResponse"];
 
+function SettingsGate({
+  me,
+  permission,
+  children,
+}: {
+  me: MeResponse;
+  permission: string;
+  children: ReactNode;
+}) {
+  if (!me.permissions.includes(permission)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => void }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const canUsers = me.permissions.includes("manage_users");
+  const canRoles = me.permissions.includes("manage_roles");
+  const canPermissions = me.permissions.includes("manage_permissions");
+  const showSettings = canUsers || canRoles || canPermissions;
+
+  return (
+    <AppShell
+      pathname={location.pathname}
+      showSettings={showSettings}
+      canUsers={canUsers}
+      canRoles={canRoles}
+      canPermissions={canPermissions}
+      onNavigate={(path) => navigate(path)}
+      onSignOut={onSignOut}
+    >
+      <Routes>
+        <Route path="/" element={<CombinedLandingPage me={me} />} />
+        <Route
+          path="/settings/users"
+          element={
+            <SettingsGate me={me} permission="manage_users">
+              <UsersPage />
+            </SettingsGate>
+          }
+        />
+        <Route
+          path="/settings/roles"
+          element={
+            <SettingsGate me={me} permission="manage_roles">
+              <RolesPage />
+            </SettingsGate>
+          }
+        />
+        <Route
+          path="/settings/permissions"
+          element={
+            <SettingsGate me={me} permission="manage_permissions">
+              <PermissionsPage />
+            </SettingsGate>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AppShell>
+  );
+}
+
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<MeResponse | null>(null);
-  const [view, setView] = useState<SettingsView>("home");
 
   const loadSession = useCallback(async () => {
     if (!getAccessToken() && !getRefreshToken()) {
       setMe(null);
-      setView("home");
       setLoading(false);
       return;
     }
     const { data, error, response } = await apiClient.GET("/me");
     if (error || !response.ok || !data) {
       setMe(null);
-      setView("home");
       setLoading(false);
       return;
     }
@@ -43,7 +106,6 @@ export default function App() {
 
   async function handleSignOut() {
     await signOut();
-    setView("home");
     await loadSession();
   }
 
@@ -64,26 +126,9 @@ export default function App() {
     return <PendingAccessPage onSignedOut={() => void loadSession()} />;
   }
 
-  const canOpenSettings = me.permissions.includes("access_administration");
-  const current = canOpenSettings ? view : "home";
-
   return (
-    <AppShell
-      current={current}
-      showSettings={canOpenSettings}
-      onNavigate={(next) => {
-        if (next !== "home" && !canOpenSettings) {
-          setView("home");
-          return;
-        }
-        setView(next);
-      }}
-      onSignOut={() => void handleSignOut()}
-    >
-      {current === "users" ? <UsersPage /> : null}
-      {current === "roles" ? <RolesPage /> : null}
-      {current === "permissions" ? <PermissionsPage /> : null}
-      {current === "home" ? <CombinedLandingPage me={me} /> : null}
-    </AppShell>
+    <BrowserRouter>
+      <AuthorizedApp me={me} onSignOut={() => void handleSignOut()} />
+    </BrowserRouter>
   );
 }

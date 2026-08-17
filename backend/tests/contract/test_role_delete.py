@@ -3,7 +3,7 @@ from tests.conftest import assign_role, auth_header, create_invite, create_user,
 
 def test_delete_unused_role(client, db):
     admin = create_user(db, upn="admin@contoso.com")
-    assign_role(db, admin, role_by_name(db, "Entity Admin"))
+    assign_role(db, admin, role_by_name(db, "System Admin"))
     db.commit()
     headers = auth_header(admin)
     created = client.post("/v1/roles", headers=headers, json={"name": "Temporary"})
@@ -14,12 +14,12 @@ def test_delete_unused_role(client, db):
 
 def test_delete_role_still_assigned_and_last_admin(client, db):
     admin = create_user(db, upn="admin@contoso.com")
-    entity_admin = role_by_name(db, "Entity Admin")
+    entity_admin = role_by_name(db, "System Admin")
     assign_role(db, admin, entity_admin)
     person = create_user(db, upn="alex@contoso.com")
-    hr = role_by_name(db, "HR User")
+    hr = role_by_name(db, "Operator")
     assign_role(db, person, hr)
-    invite = create_invite(db, email="wait@contoso.com", invited_by=admin, roles=[role_by_name(db, "PMO User")])
+    invite = create_invite(db, email="wait@contoso.com", invited_by=admin, roles=[role_by_name(db, "Operator")])
     db.commit()
     headers = auth_header(admin)
 
@@ -27,7 +27,7 @@ def test_delete_role_still_assigned_and_last_admin(client, db):
     assert assigned.status_code == 409
     assert assigned.json()["code"] == "role_still_assigned"
 
-    invited = client.delete(f"/v1/roles/{role_by_name(db, 'PMO User').id}", headers=headers)
+    invited = client.delete(f"/v1/roles/{role_by_name(db, 'Operator').id}", headers=headers)
     assert invited.status_code == 409
     assert invited.json()["code"] == "role_still_assigned"
 

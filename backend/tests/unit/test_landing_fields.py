@@ -3,29 +3,32 @@ from app.core.permissions import load_assigned_roles, load_combined_permissions
 from tests.conftest import assign_role, create_user, role_by_name
 
 
-def test_sensitive_fields_omitted_from_payload_when_permission_absent(db):
+def test_landing_has_no_demo_sections_without_module_codes(db):
     user = create_user(db)
-    assign_role(db, user, role_by_name(db, "HR User"))
+    assign_role(db, user, role_by_name(db, "Member"))
     db.commit()
     payload = build_me_response(
         user,
         load_assigned_roles(db, user.id),
         load_combined_permissions(db, user.id),
     )
+    assert payload["landing"]["accessState"] == "authorized"
+    assert payload["landing"]["sections"] == []
     assert "sensitiveFinancialFields" not in payload["landing"]
-    assert "cost" not in str(payload)
-    assert "margin" not in str(payload)
 
 
-def test_sensitive_fields_present_when_permission_granted(db):
+def test_system_admin_landing_lists_manage_permissions(db):
     user = create_user(db)
-    assign_role(db, user, role_by_name(db, "Finance User"))
+    assign_role(db, user, role_by_name(db, "System Admin"))
     db.commit()
     payload = build_me_response(
         user,
         load_assigned_roles(db, user.id),
         load_combined_permissions(db, user.id),
     )
-    fields = payload["landing"]["sensitiveFinancialFields"]
-    assert fields["cost"] == "1000.00"
-    assert fields["margin"] == "250.00"
+    assert set(payload["permissions"]) == {
+        "manage_users",
+        "manage_roles",
+        "manage_permissions",
+    }
+    assert payload["landing"]["sections"] == []

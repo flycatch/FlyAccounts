@@ -24,7 +24,7 @@ def test_initial_admin_match_is_case_insensitive(db, monkeypatch):
     user, _created = upsert_user(db, _claims(preferred_username="ADMIN@contoso.com"))
     bootstrap_initial_admin(db, user, _claims(preferred_username="ADMIN@contoso.com"))
     db.commit()
-    assert "access_administration" in load_combined_permissions(db, user.id)
+    assert "manage_users" in load_combined_permissions(db, user.id)
     get_settings.cache_clear()
 
 
@@ -37,7 +37,7 @@ def test_initial_admin_matches_email_claim(db, monkeypatch):
     user, _created = upsert_user(db, claims)
     bootstrap_initial_admin(db, user, claims)
     db.commit()
-    assert "access_administration" in load_combined_permissions(db, user.id)
+    assert "manage_users" in load_combined_permissions(db, user.id)
     get_settings.cache_clear()
 
 

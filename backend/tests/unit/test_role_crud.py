@@ -7,7 +7,7 @@ from tests.conftest import assign_role, create_user, permission_by_code, role_by
 
 
 def test_role_name_and_permission_pair_are_unique(db):
-    db.add(Role(name="Entity Admin", description="dup"))
+    db.add(Role(name="System Admin", description="dup"))
     try:
         db.commit()
         raised = False
@@ -19,10 +19,10 @@ def test_role_name_and_permission_pair_are_unique(db):
     role = Role(name="Custom")
     db.add(role)
     db.flush()
-    hr = permission_by_code(db, "hr_landing")
-    db.add(RolePermission(role_id=role.id, permission_id=hr.id))
+    manage_roles = permission_by_code(db, "manage_roles")
+    db.add(RolePermission(role_id=role.id, permission_id=manage_roles.id))
     db.flush()
-    db.add(RolePermission(role_id=role.id, permission_id=hr.id))
+    db.add(RolePermission(role_id=role.id, permission_id=manage_roles.id))
     try:
         db.commit()
         dup = False
@@ -37,29 +37,29 @@ def test_detach_uses_exact_code_not_prefix(db):
     custom = Role(name="Mixed")
     db.add(custom)
     db.flush()
-    finance = permission_by_code(db, "finance_landing")
-    sensitive = permission_by_code(db, "view_sensitive_financial_fields")
-    db.add(RolePermission(role_id=custom.id, permission_id=finance.id))
-    db.add(RolePermission(role_id=custom.id, permission_id=sensitive.id))
+    manage_roles = permission_by_code(db, "manage_roles")
+    manage_permissions = permission_by_code(db, "manage_permissions")
+    db.add(RolePermission(role_id=custom.id, permission_id=manage_roles.id))
+    db.add(RolePermission(role_id=custom.id, permission_id=manage_permissions.id))
     assign_role(db, admin, custom)
     db.commit()
 
     link = db.scalars(
         select(RolePermission).where(
             RolePermission.role_id == custom.id,
-            RolePermission.permission_id == sensitive.id,
+            RolePermission.permission_id == manage_permissions.id,
         )
     ).one()
     db.delete(link)
     db.commit()
-    assert load_combined_permissions(db, admin.id) == {"finance_landing"}
-    assert "view_sensitive_financial_fields" not in load_combined_permissions(db, admin.id)
+    assert load_combined_permissions(db, admin.id) == {"manage_roles"}
+    assert "manage_permissions" not in load_combined_permissions(db, admin.id)
 
 
 def test_last_admin_on_detach(db):
     admin = create_user(db, upn="admin@contoso.com")
-    entity_admin = role_by_name(db, "Entity Admin")
-    assign_role(db, admin, entity_admin)
-    access = permission_by_code(db, "access_administration")
+    system_admin = role_by_name(db, "System Admin")
+    assign_role(db, admin, system_admin)
+    access = permission_by_code(db, "manage_users")
     db.commit()
-    assert would_detach_leave_last_admin(db, entity_admin.id, access.id) is True
+    assert would_detach_leave_last_admin(db, system_admin.id, access.id) is True

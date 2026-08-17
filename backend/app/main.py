@@ -24,7 +24,7 @@ def _committed_openapi() -> dict:
         Path(__file__).resolve().parents[1] / "contracts" / "openapi.yaml",
         Path(__file__).resolve().parents[2]
         / "specs"
-        / "003-user-management"
+        / "004-settings-routes-rbac"
         / "contracts"
         / "openapi.yaml",
     ]
@@ -45,7 +45,7 @@ async def lifespan(_application: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    application = FastAPI(title="FlyAccounts", version="3.0.0", lifespan=lifespan)
+    application = FastAPI(title="FlyAccounts", version="4.0.0", lifespan=lifespan)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.invites import find_active_invite
-from app.core.permissions import ACCESS_ADMINISTRATION, load_combined_permissions
+from app.core.permissions import MANAGE_USERS, load_combined_permissions
 from app.models import Permission, Role, RoleAssignment, RolePermission, User
 
 
@@ -82,7 +82,7 @@ def apply_entry_path(user: User, created: bool, consumed: bool) -> None:
 
 
 def bootstrap_initial_admin(db: Session, user: User, claims: dict) -> None:
-    if ACCESS_ADMINISTRATION in load_combined_permissions(db, user.id):
+    if MANAGE_USERS in load_combined_permissions(db, user.id):
         return
 
     configured = (get_settings().initial_admin_email or "").strip().lower()
@@ -101,7 +101,7 @@ def bootstrap_initial_admin(db: Session, user: User, claims: dict) -> None:
         select(Role)
         .join(RolePermission, RolePermission.role_id == Role.id)
         .join(Permission, Permission.id == RolePermission.permission_id)
-        .where(Permission.code == ACCESS_ADMINISTRATION)
+        .where(Permission.code == MANAGE_USERS)
     ).first()
     if role is None:
         return

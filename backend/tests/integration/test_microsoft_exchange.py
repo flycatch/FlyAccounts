@@ -110,8 +110,8 @@ def test_microsoft_exchange_consumes_matching_invite(monkeypatch):
             from tests.conftest import create_user
 
             admin = create_user(session, upn="stack-admin@contoso.com")
-        finance = session.scalars(select(Role).where(Role.name == "Finance User")).one()
-        hr = session.scalars(select(Role).where(Role.name == "HR User"))
+        finance = session.scalars(select(Role).where(Role.name == "Member")).one()
+        hr = session.scalars(select(Role).where(Role.name == "Operator"))
         hr_role = hr.first()
         invite = Invite(email="invited-stack@contoso.com", invited_by_user_id=admin.id)
         session.add(invite)
@@ -132,7 +132,7 @@ def test_microsoft_exchange_consumes_matching_invite(monkeypatch):
     )
     assert exchanged.status_code == 200
     user = exchanged.json()["user"]
-    assert {role["name"] for role in user["roles"]} >= {"Finance User"}
+    assert {role["name"] for role in user["roles"]} >= {"Member"}
     assert user["landing"]["accessState"] == "authorized"
     get_settings.cache_clear()
 

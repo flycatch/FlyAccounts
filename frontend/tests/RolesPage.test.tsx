@@ -18,8 +18,8 @@ vi.mock("../src/api/client", () => ({
 import { RolesPage } from "../src/pages/settings/RolesPage";
 
 const permissions = [
-  { id: "perm-hr", code: "hr_landing", name: "HR landing", module: "hr" },
-  { id: "perm-pmo", code: "pmo_landing", name: "PMO landing", module: "pmo" },
+  { id: "perm-hr", permission: "manage_roles", name: "Manage roles" },
+  { id: "perm-pmo", permission: "manage_permissions", name: "Manage permissions" },
 ];
 
 describe("RolesPage", () => {
@@ -39,7 +39,11 @@ describe("RolesPage", () => {
     del.mockReset();
     get.mockImplementation((path: string) => {
       if (path === "/permissions") {
-        return Promise.resolve({ data: { permissions }, error: undefined, response: { ok: true } });
+        return Promise.resolve({
+          data: { modules: [{ module: "settings", permissions }] },
+          error: undefined,
+          response: { ok: true },
+        });
       }
       return Promise.resolve({ data: { roles }, error: undefined, response: { ok: true } });
     });
@@ -124,7 +128,7 @@ describe("RolesPage", () => {
     expect(await screen.findByText("Role updated.")).toBeInTheDocument();
 
     selectRole(/operations/i);
-    fireEvent.click(screen.getByRole("button", { name: /detach pmo landing/i }));
+    fireEvent.click(screen.getByRole("button", { name: /detach manage permissions/i }));
     expect(await screen.findByText("Permission detached.")).toBeInTheDocument();
   });
 

@@ -8,9 +8,9 @@ from tests.conftest import assign_role, create_invite, create_user, role_by_name
 
 def test_consume_invite_copies_roles_case_insensitively(db):
     admin = create_user(db, upn="admin@contoso.com")
-    finance = role_by_name(db, "Finance User")
-    hr = role_by_name(db, "HR User")
-    create_invite(db, email="Pat@Contoso.com", invited_by=admin, roles=[finance, hr])
+    member = role_by_name(db, "Member")
+    operator = role_by_name(db, "Operator")
+    create_invite(db, email="Pat@Contoso.com", invited_by=admin, roles=[member, operator])
     db.commit()
 
     claims = {
@@ -24,21 +24,18 @@ def test_consume_invite_copies_roles_case_insensitively(db):
     db.commit()
 
     assignments = list(db.scalars(select(RoleAssignment).where(RoleAssignment.user_id == user.id)))
-    assert {row.role_id for row in assignments} == {finance.id, hr.id}
+    assert {row.role_id for row in assignments} == {member.id, operator.id}
     assert user.entry_path == "invite"
-    assert load_combined_permissions(db, user.id) == {
-        "finance_landing",
-        "view_sensitive_financial_fields",
-        "hr_landing",
-    }
+    assert load_combined_permissions(db, user.id) == set()
 
 
 def test_consume_invite_skips_duplicate_role_assignments(db):
     admin = create_user(db, upn="admin@contoso.com")
-    hr = role_by_name(db, "HR User")
+    operator = role_by_name(db, "Operator")
+    member = role_by_name(db, "Member")
     user = create_user(db, upn="pat@contoso.com", microsoft_oid="oid-invited-2")
-    assign_role(db, user, hr)
-    create_invite(db, email="pat@contoso.com", invited_by=admin, roles=[hr, role_by_name(db, "PMO User")])
+    assign_role(db, user, operator)
+    create_invite(db, email="pat@contoso.com", invited_by=admin, roles=[operator, member])
     db.commit()
 
     consume_invite(db, user, {"preferred_username": "PAT@contoso.com"})
@@ -54,7 +51,7 @@ def test_initial_admin_still_runs_after_non_admin_invite(db, monkeypatch):
 
     get_settings.cache_clear()
     inviter = create_user(db, upn="other-admin@contoso.com")
-    create_invite(db, email="admin@contoso.com", invited_by=inviter, roles=[role_by_name(db, "HR User")])
+    create_invite(db, email="admin@contoso.com", invited_by=inviter, roles=[role_by_name(db, "Operator")])
     db.commit()
 
     claims = {
@@ -67,6 +64,8 @@ def test_initial_admin_still_runs_after_non_admin_invite(db, monkeypatch):
     consume_invite(db, user, claims)
     bootstrap_initial_admin(db, user, claims)
     db.commit()
-    assert "access_administration" in load_combined_permissions(db, user.id)
-    assert "hr_landing" in load_combined_permissions(db, user.id)
+    permissions = load_combined_permissions(db, user.id)
+    assert "manage_users" in permissions
+    assert "manage_roles" in permissions
+    assert "manage_permissions" in permissions
     get_settings.cache_clear()

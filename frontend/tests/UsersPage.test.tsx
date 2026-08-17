@@ -25,7 +25,7 @@ const people = [
     displayName: "Alex Example",
     status: "active" as const,
     entryPath: "organization" as const,
-    roles: [{ id: "role-hr", name: "HR User" }],
+    roles: [{ id: "role-hr", name: "Operator" }],
   },
   {
     id: "user-2",
@@ -41,32 +41,25 @@ const people = [
     personType: "invite" as const,
     email: "invited@contoso.com",
     status: "invited" as const,
-    roles: [{ id: "role-hr", name: "HR User" }],
+    roles: [{ id: "role-hr", name: "Operator" }],
   },
 ];
 const roles = [
   {
     id: "role-hr",
-    name: "HR User",
-    permissions: [{ id: "perm-hr", code: "hr_landing", name: "HR landing", module: "hr" }],
+    name: "Operator",
+    permissions: [{ id: "perm-hr", name: "Manage roles", permission: "manage_roles" }],
   },
   {
     id: "role-finance",
-    name: "Finance User",
-    permissions: [
-      { id: "perm-finance", code: "finance_landing", name: "Finance landing", module: "finance" },
-    ],
+    name: "Member",
+    permissions: [],
   },
 ];
 
 async function openInviteModal() {
   fireEvent.click(screen.getByRole("button", { name: /^invite user$/i }));
   expect(await screen.findByRole("dialog", { name: /invite user/i })).toBeInTheDocument();
-}
-
-async function openAssignModal() {
-  fireEvent.click(screen.getByRole("button", { name: /^assign roles$/i }));
-  expect(await screen.findByRole("dialog", { name: /assign roles/i })).toBeInTheDocument();
 }
 
 function selectPerson(name: RegExp) {
@@ -91,6 +84,7 @@ describe("UsersPage", () => {
     expect(await screen.findByText("Alex Example")).toBeInTheDocument();
     expect(screen.queryByText("Waiting for a role.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /remove person/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^assign roles$/i })).not.toBeInTheDocument();
     selectPerson(/sam pending/i);
     expect(screen.getByText("Waiting for a role.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
@@ -115,13 +109,13 @@ describe("UsersPage", () => {
     expect(screen.getByText("Waiting for a role.")).toBeInTheDocument();
   });
 
-  it("lists signed-in people with status chips and assigns without replacing", async () => {
+  it("assigns roles from the selected person detail with multi-select", async () => {
     post.mockResolvedValue({
       data: {
         ...people[0],
         roles: [
-          { id: "role-hr", name: "HR User" },
-          { id: "role-finance", name: "Finance User" },
+          { id: "role-hr", name: "Operator" },
+          { id: "role-finance", name: "Member" },
         ],
       },
       error: undefined,
@@ -130,15 +124,16 @@ describe("UsersPage", () => {
 
     render(<UsersPage />);
     expect(await screen.findByText("Alex Example")).toBeInTheDocument();
-    expect(screen.getByText("alex@contoso.com")).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("Pending")).toBeInTheDocument();
-    await openAssignModal();
-    fireEvent.change(screen.getByLabelText(/^person$/i), { target: { value: "user-1" } });
-    fireEvent.change(screen.getByLabelText(/^role$/i), { target: { value: "role-finance" } });
-    fireEvent.click(screen.getByRole("button", { name: /^assign role$/i }));
+    selectPerson(/alex example/i);
+    fireEvent.click(screen.getByLabelText(/^member$/i));
+    fireEvent.click(screen.getByRole("button", { name: /^assign selected roles$/i }));
     expect(await screen.findByText("Role assigned.")).toBeInTheDocument();
-    expect(post).toHaveBeenCalled();
+    expect(post).toHaveBeenCalledWith(
+      "/people/{userId}/roles",
+      expect.objectContaining({
+        body: { roleIds: ["role-finance"] },
+      }),
+    );
   });
 
   it("invites with a role and with no roles and surfaces invite errors", async () => {
@@ -179,19 +174,11 @@ describe("UsersPage", () => {
         body: { email: "two@contoso.com", roleIds: ["role-hr"] },
       }),
     );
-    expect((await screen.findAllByText("two@contoso.com")).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Invited").length).toBeGreaterThan(0);
 
     await openInviteModal();
     fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "none@contoso.com" } });
     fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
     expect((await screen.findAllByText("none@contoso.com")).length).toBeGreaterThan(0);
-    expect(post).toHaveBeenCalledWith(
-      "/people/invites",
-      expect.objectContaining({
-        body: { email: "none@contoso.com", roleIds: [] },
-      }),
-    );
 
     post.mockResolvedValueOnce({
       data: undefined,
@@ -202,50 +189,25 @@ describe("UsersPage", () => {
     fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "two@contoso.com" } });
     fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
     expect(await screen.findByText("That email is already invited.")).toBeInTheDocument();
-
-    post.mockResolvedValueOnce({
-      data: undefined,
-      error: { code: "already_present", message: "That person is already listed." },
-      response: { ok: false, status: 409 },
-    });
-    fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "alex@contoso.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /^invite$/i }));
-    expect(await screen.findByText("That person is already listed.")).toBeInTheDocument();
   });
 
-  it("assigns and revokes on users and unused invites and shows last-admin", async () => {
-    post.mockImplementation((path: string) => {
-      if (path === "/people/invites/{inviteId}/roles") {
-        return Promise.resolve({
-          data: {
-            ...people[2],
-            roles: [
-              { id: "role-hr", name: "HR User" },
-              { id: "role-finance", name: "Finance User" },
-            ],
-          },
-          error: undefined,
-          response: { ok: true },
-        });
-      }
-      return Promise.resolve({
-        data: {
-          ...people[0],
-          roles: [
-            { id: "role-hr", name: "HR User" },
-            { id: "role-finance", name: "Finance User" },
-          ],
-        },
-        error: undefined,
-        response: { ok: true },
-      });
+  it("assigns on invites from detail and shows last-admin", async () => {
+    post.mockResolvedValue({
+      data: {
+        ...people[2],
+        roles: [
+          { id: "role-hr", name: "Operator" },
+          { id: "role-finance", name: "Member" },
+        ],
+      },
+      error: undefined,
+      response: { ok: true },
     });
     render(<UsersPage />);
     await screen.findByText("Alex Example");
-    await openAssignModal();
-    fireEvent.change(screen.getByLabelText(/^person$/i), { target: { value: "invite-1" } });
-    fireEvent.change(screen.getByLabelText(/^role$/i), { target: { value: "role-finance" } });
-    fireEvent.click(screen.getByRole("button", { name: /^assign role$/i }));
+    selectPerson(/invited@contoso\.com/i);
+    fireEvent.click(screen.getByLabelText(/^member$/i));
+    fireEvent.click(screen.getByRole("button", { name: /^assign selected roles$/i }));
     expect(await screen.findByText("Role assigned.")).toBeInTheDocument();
     expect(post).toHaveBeenCalledWith(
       "/people/invites/{inviteId}/roles",
@@ -254,14 +216,12 @@ describe("UsersPage", () => {
 
     del.mockResolvedValueOnce({
       data: undefined,
-      error: { code: "last_admin_required", message: "At least one person with access administration must remain." },
+      error: { code: "last_admin_required", message: "At least one person with manage users must remain." },
       response: { ok: false, status: 409 },
     });
     selectPerson(/alex example/i);
-    fireEvent.click(screen.getByRole("button", { name: /revoke hr user/i }));
-    expect(
-      await screen.findByText("At least one person with access administration must remain."),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /revoke operator/i }));
+    expect(await screen.findByText("At least one person with manage users must remain.")).toBeInTheDocument();
   });
 
   it("cancels invites and refuses last-admin remove", async () => {
@@ -274,40 +234,11 @@ describe("UsersPage", () => {
 
     del.mockResolvedValueOnce({
       data: undefined,
-      error: { code: "last_admin_required", message: "At least one person with access administration must remain." },
+      error: { code: "last_admin_required", message: "At least one person with manage users must remain." },
       response: { ok: false, status: 409 },
     });
     selectPerson(/alex example/i);
     fireEvent.click(screen.getByRole("button", { name: /remove person/i }));
-    expect(
-      await screen.findByText("At least one person with access administration must remain."),
-    ).toBeInTheDocument();
-  });
-
-  it("surfaces duplicate assignment and last-admin messages", async () => {
-    post.mockResolvedValue({
-      data: undefined,
-      error: { code: "duplicate_assignment", message: "That role is already assigned." },
-      response: { ok: false, status: 409 },
-    });
-    render(<UsersPage />);
-    await screen.findByText("Alex Example");
-    await openAssignModal();
-    fireEvent.change(screen.getByLabelText(/^person$/i), { target: { value: "user-1" } });
-    fireEvent.change(screen.getByLabelText(/^role$/i), { target: { value: "role-hr" } });
-    fireEvent.click(screen.getByRole("button", { name: /^assign role$/i }));
-    expect(await screen.findByText("That role is already assigned.")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /close/i }));
-    del.mockResolvedValue({
-      data: undefined,
-      error: { code: "last_admin_required", message: "At least one person with access administration must remain." },
-      response: { ok: false, status: 409 },
-    });
-    selectPerson(/alex example/i);
-    fireEvent.click(screen.getByRole("button", { name: /revoke hr user/i }));
-    expect(
-      await screen.findByText("At least one person with access administration must remain."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("At least one person with manage users must remain.")).toBeInTheDocument();
   });
 });

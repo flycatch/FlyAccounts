@@ -44,8 +44,11 @@ describe("sign out", () => {
     storeTokens("access-1", "refresh-1");
     render(
       <AppShell
-        current="home"
+        pathname="/"
         showSettings={false}
+        canUsers={false}
+        canRoles={false}
+        canPermissions={false}
         onNavigate={() => undefined}
         onSignOut={() => {
           void signOut();

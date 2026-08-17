@@ -7,7 +7,7 @@ from tests.conftest import assign_role, auth_header, create_invite, create_user,
 
 def test_cancel_unused_invite(client, db):
     admin = create_user(db, upn="admin@contoso.com")
-    assign_role(db, admin, role_by_name(db, "Entity Admin"))
+    assign_role(db, admin, role_by_name(db, "System Admin"))
     invite = create_invite(db, email="cancel-me@contoso.com", invited_by=admin)
     db.commit()
     headers = auth_header(admin)
@@ -24,7 +24,7 @@ def test_cancel_unused_invite(client, db):
 
 def test_remove_person_revokes_refresh_and_last_admin(client, db):
     admin = create_user(db, upn="admin@contoso.com")
-    assign_role(db, admin, role_by_name(db, "Entity Admin"))
+    assign_role(db, admin, role_by_name(db, "System Admin"))
     person = create_user(db, upn="remove-me@contoso.com")
     persist_refresh_token(db, person.id)
     db.commit()

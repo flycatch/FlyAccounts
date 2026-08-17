@@ -23,20 +23,20 @@ const adminMe = {
   id: "00000000-0000-0000-0000-000000000001",
   displayName: "Pat Admin",
   upn: "admin@contoso.com",
-  roles: [{ id: "role-admin", name: "Entity Admin" }],
-  permissions: ["access_administration"],
+  roles: [{ id: "role-admin", name: "System Admin" }],
+  permissions: ["manage_users", "manage_roles", "manage_permissions"],
   landing: { accessState: "authorized" as const, sections: [] },
 };
 
-const financeMe = {
+const memberMe = {
   id: "00000000-0000-0000-0000-000000000002",
-  displayName: "Alex Finance",
-  upn: "finance@contoso.com",
-  roles: [{ id: "role-finance", name: "Finance User" }],
-  permissions: ["finance_landing"],
+  displayName: "Alex Member",
+  upn: "member@contoso.com",
+  roles: [{ id: "role-member", name: "Member" }],
+  permissions: [],
   landing: {
     accessState: "authorized" as const,
-    sections: [{ code: "finance_landing", title: "Finance", body: "Content allowed by finance_landing." }],
+    sections: [],
   },
 };
 
@@ -56,7 +56,7 @@ describe("Settings navigation", () => {
     localStorage.setItem(ACCESS_TOKEN_KEY, "access-token");
   });
 
-  it("shows Users, Roles, and Permissions only when access_administration is present", async () => {
+  it("shows Users, Roles, and Permissions routes when manage_* permissions are present", async () => {
     get.mockImplementation((path: string) => {
       if (path === "/me") {
         return Promise.resolve({ data: adminMe, error: undefined, response: { ok: true } });
@@ -68,7 +68,7 @@ describe("Settings navigation", () => {
         return Promise.resolve({ data: { roles: [] }, error: undefined, response: { ok: true } });
       }
       if (path === "/permissions") {
-        return Promise.resolve({ data: { permissions: [] }, error: undefined, response: { ok: true } });
+        return Promise.resolve({ data: { modules: [] }, error: undefined, response: { ok: true } });
       }
       return Promise.resolve({ data: undefined, error: undefined, response: { ok: true } });
     });
@@ -83,16 +83,14 @@ describe("Settings navigation", () => {
     expect(await screen.findByRole("heading", { name: /roles/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^permissions$/i }));
     expect(await screen.findByRole("heading", { name: /permissions/i })).toBeInTheDocument();
-    expect(screen.queryByText(/access administration/i)).not.toBeInTheDocument();
   });
 
-  it("hides Settings for a signed-in person without access_administration", async () => {
-    get.mockResolvedValue({ data: financeMe, error: undefined, response: { ok: true } });
+  it("hides Settings for a signed-in person without manage_* permissions", async () => {
+    get.mockResolvedValue({ data: memberMe, error: undefined, response: { ok: true } });
     render(<App />);
-    expect(await screen.findByText("Alex Finance")).toBeInTheDocument();
+    expect(await screen.findByText("Alex Member")).toBeInTheDocument();
     expect(screen.queryByText(/^settings$/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^users$/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/access administration/i)).not.toBeInTheDocument();
   });
 
   it("does not offer Settings on pending access", async () => {

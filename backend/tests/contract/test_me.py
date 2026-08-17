@@ -28,48 +28,48 @@ def test_me_pending_has_empty_roles_permissions_sections(client, db):
     assert "sensitiveFinancialFields" not in body["landing"]
 
 
-def test_me_authorized_sections_follow_combined_permissions(client, db):
+def test_me_authorized_lists_roles_without_legacy_sections(client, db):
     user = create_user(db, display_name="Alex Example", upn="alex@contoso.com")
-    assign_role(db, user, role_by_name(db, "Finance User"))
-    assign_role(db, user, role_by_name(db, "HR User"))
+    assign_role(db, user, role_by_name(db, "Member"))
+    assign_role(db, user, role_by_name(db, "Operator"))
     db.commit()
 
     response = client.get("/v1/me", headers=auth_header(user))
     assert response.status_code == 200
     body = response.json()
     assert body["landing"]["accessState"] == "authorized"
-    codes = {section["code"] for section in body["landing"]["sections"]}
-    assert codes == {"finance_landing", "hr_landing"}
-    assert "pmo_landing" not in codes
-    assert "sensitiveFinancialFields" in body["landing"]
-    assert body["landing"]["sensitiveFinancialFields"]["cost"] == "1000.00"
-    assert body["landing"]["sensitiveFinancialFields"]["margin"] == "250.00"
-    assert {role["name"] for role in body["roles"]} == {"Finance User", "HR User"}
+    assert body["landing"]["sections"] == []
+    assert "sensitiveFinancialFields" not in body["landing"]
+    assert {role["name"] for role in body["roles"]} == {"Member", "Operator"}
+    assert body["permissions"] == []
 
 
-def test_me_omits_sensitive_fields_without_permission(client, db):
-    user = create_user(db, upn="hr@contoso.com")
-    assign_role(db, user, role_by_name(db, "HR User"))
+def test_me_system_admin_has_manage_permissions(client, db):
+    user = create_user(db, upn="admin@contoso.com")
+    assign_role(db, user, role_by_name(db, "System Admin"))
     db.commit()
 
     response = client.get("/v1/me", headers=auth_header(user))
     assert response.status_code == 200
     body = response.json()
-    assert body["landing"]["sections"][0]["code"] == "hr_landing"
-    assert "sensitiveFinancialFields" not in body["landing"]
-    assert "view_sensitive_financial_fields" not in body["permissions"]
+    assert set(body["permissions"]) == {
+        "manage_users",
+        "manage_roles",
+        "manage_permissions",
+    }
+    assert body["landing"]["sections"] == []
 
 
 def test_me_after_consumed_invite_returns_union(client, db):
     from app.core.bootstrap import consume_invite, upsert_user
-    from tests.conftest import create_invite, create_user, role_by_name
+    from tests.conftest import create_invite
 
     admin = create_user(db, upn="admin@contoso.com")
     create_invite(
         db,
         email="invited@contoso.com",
         invited_by=admin,
-        roles=[role_by_name(db, "Finance User"), role_by_name(db, "HR User")],
+        roles=[role_by_name(db, "Member"), role_by_name(db, "Operator")],
     )
     db.commit()
     claims = {
@@ -85,13 +85,6 @@ def test_me_after_consumed_invite_returns_union(client, db):
     response = client.get("/v1/me", headers=auth_header(user))
     assert response.status_code == 200
     body = response.json()
-    assert {role["name"] for role in body["roles"]} == {"Finance User", "HR User"}
-    assert set(body["permissions"]) == {
-        "finance_landing",
-        "view_sensitive_financial_fields",
-        "hr_landing",
-    }
-    codes = {section["code"] for section in body["landing"]["sections"]}
-    assert codes == {"finance_landing", "hr_landing"}
-    assert "pmo_landing" not in codes
-    assert "sensitiveFinancialFields" in body["landing"]
+    assert {role["name"] for role in body["roles"]} == {"Member", "Operator"}
+    assert body["permissions"] == []
+    assert body["landing"]["sections"] == []

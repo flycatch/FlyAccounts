@@ -10,6 +10,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  justify-content: flex-end;
 }
 
 .settings-page h2,
@@ -138,6 +139,39 @@
   color: var(--color-black);
 }
 
+.settings-assign-label {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-body);
+  color: var(--color-black);
+}
+
+.settings-assign-empty {
+  color: var(--color-subtext);
+}
+
+.settings-role-multiselect {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings-role-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-black);
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+
 .settings-module-list {
   display: flex;
   flex-direction: column;
@@ -193,21 +227,6 @@
 
 .permission-card-field dd {
   margin: 0;
-}
-
-.permission-card-module {
-  font-family: var(--font-body);
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--text-meta);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-subtext);
-}
-
-.permission-card-action {
-  font-family: var(--font-body);
-  font-size: 13px;
-  color: var(--color-black);
 }
 
 .permission-card-code {

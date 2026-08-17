@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import CurrentUser, require_access_administration
+from app.core.deps import CurrentUser, require_manage_roles
 from app.core.errors import (
     duplicate_permission,
     duplicate_role_name,
@@ -43,12 +43,9 @@ class AttachPermissionRequest(BaseModel):
 def permission_payload(permission: Permission) -> dict:
     payload: dict = {
         "id": str(permission.id),
-        "code": permission.code,
         "name": permission.name,
-        "module": permission.module,
+        "permission": permission.code,
     }
-    if permission.action:
-        payload["action"] = permission.action
     if permission.description:
         payload["description"] = permission.description
     return payload
@@ -89,7 +86,7 @@ def load_role(db: Session, role_id: uuid.UUID) -> Role | None:
 
 @router.get("/roles")
 def list_roles(
-    _current: CurrentUser = Depends(require_access_administration),
+    _current: CurrentUser = Depends(require_manage_roles),
     db: Session = Depends(get_db),
 ) -> dict:
     return {"roles": [role_payload(role) for role in load_roles_with_permissions(db)]}
@@ -98,7 +95,7 @@ def list_roles(
 @router.post("/roles", status_code=201)
 def create_role(
     body: CreateRoleRequest,
-    _current: CurrentUser = Depends(require_access_administration),
+    _current: CurrentUser = Depends(require_manage_roles),
     db: Session = Depends(get_db),
 ) -> dict:
     name = body.name.strip()
@@ -121,7 +118,7 @@ def create_role(
 def update_role(
     roleId: uuid.UUID,
     body: UpdateRoleRequest,
-    _current: CurrentUser = Depends(require_access_administration),
+    _current: CurrentUser = Depends(require_manage_roles),
     db: Session = Depends(get_db),
 ) -> dict:
     role = load_role(db, roleId)
@@ -150,7 +147,7 @@ def update_role(
 def attach_permission(
     roleId: uuid.UUID,
     body: AttachPermissionRequest,
-    _current: CurrentUser = Depends(require_access_administration),
+    _current: CurrentUser = Depends(require_manage_roles),
     db: Session = Depends(get_db),
 ) -> dict:
     role = load_role(db, roleId)
@@ -180,7 +177,7 @@ def attach_permission(
 def detach_permission(
     roleId: uuid.UUID,
     permissionId: uuid.UUID,
-    _current: CurrentUser = Depends(require_access_administration),
+    _current: CurrentUser = Depends(require_manage_roles),
     db: Session = Depends(get_db),
 ) -> dict:
     role = load_role(db, roleId)
@@ -208,7 +205,7 @@ def detach_permission(
 @router.delete("/roles/{roleId}", status_code=204)
 def delete_role(
     roleId: uuid.UUID,
-    _current: CurrentUser = Depends(require_access_administration),
+    _current: CurrentUser = Depends(require_manage_roles),
     db: Session = Depends(get_db),
 ) -> None:
     role = db.get(Role, roleId)

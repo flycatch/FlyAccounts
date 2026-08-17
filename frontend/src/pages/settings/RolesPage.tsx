@@ -31,7 +31,7 @@ function errorMessage(payload: unknown, fallback: string): string {
       return "That role is still assigned to a person.";
     }
     if (code === "last_admin_required") {
-      return "At least one person with access administration must remain.";
+      return "At least one person with manage users must remain.";
     }
   }
   return fallback;
@@ -71,7 +71,7 @@ export function RolesPage() {
       }
     }
     if (permissionsResult.data) {
-      setPermissions(permissionsResult.data.permissions);
+      setPermissions(permissionsResult.data.modules.flatMap((group) => group.permissions));
     }
   }
 
@@ -271,7 +271,7 @@ export function RolesPage() {
                     {selectedRole.permissions.map((permission) => (
                       <li key={permission.id}>
                         <span className="settings-detail-list-label">
-                          {permission.name} ({permission.code})
+                          {permission.name} ({permission.permission})
                         </span>
                         <IconButton
                           label={`Detach ${permission.name}`}

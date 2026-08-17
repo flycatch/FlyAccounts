@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Exchange a Microsoft ID token for FlyAccounts tokens
-         * @description Validates the Microsoft ID token for the configured organizational tenant and SPA client id. Personal accounts and unknown directories are rejected and MUST NOT create a user. On success, upserts the user. If the work email matches an active invite (case-insensitive), copies invite roles onto the user, sets entryPath to invite, and consumes the invite. Otherwise a newly created user has entryPath organization. Then, if combined permissions still lack access_administration and the work email matches INITIAL_ADMIN_EMAIL, assigns the seeded admin role. Returns an access JWT plus a refresh token.
+         * @description Validates the Microsoft ID token for the configured organizational tenant and SPA client id. Personal accounts and unknown directories are rejected and MUST NOT create a user. On success, upserts the user. If the work email matches an active invite (case-insensitive), copies invite roles onto the user, sets entryPath to invite, and consumes the invite. Otherwise a newly created user has entryPath organization. Then, if combined permissions still lack manage_users and the work email matches INITIAL_ADMIN_EMAIL, assigns the seeded System Admin role. Returns an access JWT plus a refresh token.
          */
         post: operations["exchangeMicrosoftToken"];
         delete?: never;
@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Signed-in people and unused invites
-         * @description Requires access_administration in the caller's combined permissions. Returns a union of Users and active Invites. Unused invites have personType invite and status invited. Signed-in people have personType user and status pending or active.
+         * @description Requires manage_users in the caller's combined permissions. Returns a union of Users and active Invites. Unused invites have personType invite and status invited. Signed-in people have personType user and status pending or active.
          */
         get: operations["listPeople"];
         put?: never;
@@ -133,13 +133,13 @@ export interface paths {
         };
         /**
          * Roles with attached permissions
-         * @description Requires access_administration. Returns roles as data, including attached existing permissions. Creating permission types is not available on this operation.
+         * @description Requires manage_roles. Returns roles as data, including attached existing permissions. Creating permission types is not available on this operation.
          */
         get: operations["listRoles"];
         put?: never;
         /**
          * Create a role
-         * @description Requires access_administration. Name is required and MUST be unique. Existing permissions are attached with a later call, not created here.
+         * @description Requires manage_roles. Name is required and MUST be unique. Existing permissions are attached with a later call, not created here.
          */
         post: operations["createRole"];
         delete?: never;
@@ -160,7 +160,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a signed-in person
-         * @description Requires access_administration. Removes a listed User and their role assignments. Refresh tokens for that person are revoked. Does not prevent a later organization-based sign-in by the same account. Refused when the change would leave zero signed-in people whose combined permissions include access_administration. Unused invites are cancelled with DELETE /people/invites/{inviteId}, not this operation.
+         * @description Requires manage_users. Removes a listed User and their role assignments. Refresh tokens for that person are revoked. Does not prevent a later organization-based sign-in by the same account. Refused when the change would leave zero signed-in people whose combined permissions include manage_users. Unused invites are cancelled with DELETE /people/invites/{inviteId}, not this operation.
          */
         delete: operations["removePerson"];
         options?: never;
@@ -178,10 +178,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Assign an existing role
-         * @description Adds the role without replacing roles the person already has. Duplicate assignment is refused. Requires access_administration.
+         * Assign one or more existing roles
+         * @description Adds the roles without replacing roles the person already has. Duplicate assignment of any role is refused. Requires manage_users.
          */
-        post: operations["assignRole"];
+        post: operations["assignRoles"];
         delete?: never;
         options?: never;
         head?: never;
@@ -200,7 +200,7 @@ export interface paths {
         post?: never;
         /**
          * Revoke one assigned role
-         * @description Removes one assignment. Remaining roles stay. If none remain, the person has no roles (pending access on their next use). Refused when the change would leave zero signed-in people whose combined permissions include access_administration. Unused invites do not count as administrators.
+         * @description Removes one assignment. Remaining roles stay. If none remain, the person has no roles (pending access on their next use). Refused when the change would leave zero signed-in people whose combined permissions include manage_users. Unused invites do not count as administrators.
          */
         delete: operations["revokeRole"];
         options?: never;
@@ -219,7 +219,7 @@ export interface paths {
         put?: never;
         /**
          * Invite a person by organizational work email
-         * @description Requires access_administration. Creates an unused invite with zero or more existing roles. The invited person cannot use the application until they sign in. Duplicate active invite of the same email is refused. Invite of an email that already belongs to a listed User is refused. Sending email is not part of this operation.
+         * @description Requires manage_users. Creates an unused invite with zero or more existing roles. The invited person cannot use the application until they sign in. Duplicate active invite of the same email is refused. Invite of an email that already belongs to a listed User is refused. Sending email is not part of this operation.
          */
         post: operations["createInvite"];
         delete?: never;
@@ -240,7 +240,7 @@ export interface paths {
         post?: never;
         /**
          * Cancel an unused invite
-         * @description Requires access_administration. Removes an unused invite from the list. Does not prevent a later organization-based sign-in by that email. Consumed invites cannot be cancelled.
+         * @description Requires manage_users. Removes an unused invite from the list. Does not prevent a later organization-based sign-in by that email. Consumed invites cannot be cancelled.
          */
         delete: operations["cancelInvite"];
         options?: never;
@@ -258,10 +258,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Assign an existing role to an unused invite
-         * @description Adds the role without replacing roles the invite already has. Duplicate assignment is refused. Requires access_administration.
+         * Assign one or more existing roles to an unused invite
+         * @description Adds the roles without replacing roles the invite already has. Duplicate assignment of any role is refused. Requires manage_users.
          */
-        post: operations["assignInviteRole"];
+        post: operations["assignInviteRoles"];
         delete?: never;
         options?: never;
         head?: never;
@@ -280,7 +280,7 @@ export interface paths {
         post?: never;
         /**
          * Revoke one role from an unused invite
-         * @description Removes one InviteRole. Remaining roles stay. Last-admin does not apply (unused invites cannot administer). Requires access_administration.
+         * @description Removes one InviteRole. Remaining roles stay. Last-admin does not apply (unused invites cannot administer). Requires manage_users.
          */
         delete: operations["revokeInviteRole"];
         options?: never;
@@ -300,14 +300,14 @@ export interface paths {
         post?: never;
         /**
          * Delete an unused role
-         * @description Requires access_administration. Refused while any User or active Invite is assigned the role. Refused when deleting would leave zero signed-in people whose combined permissions include access_administration.
+         * @description Requires manage_roles. Refused while any User or active Invite is assigned the role. Refused when deleting would leave zero signed-in people whose combined permissions include manage_users.
          */
         delete: operations["deleteRole"];
         options?: never;
         head?: never;
         /**
          * Change a role name or description
-         * @description Requires access_administration. Name MUST remain unique. Authorization still follows attached permissions, not the display name.
+         * @description Requires manage_roles. Name MUST remain unique. Authorization still follows attached permissions, not the display name.
          */
         patch: operations["updateRole"];
         trace?: never;
@@ -323,7 +323,7 @@ export interface paths {
         put?: never;
         /**
          * Attach an existing permission to a role
-         * @description Adds the permission without replacing permissions the role already has. Duplicate attach is refused. Creating permission types is not available. Requires access_administration. Refused when the change would leave zero signed-in people with access_administration (does not apply to attach of a new grant).
+         * @description Adds the permission without replacing permissions the role already has. Duplicate attach is refused. Creating permission types is not available. Requires manage_roles. Refused when the change would leave zero signed-in people with manage_users (does not apply to attach of a new grant).
          */
         post: operations["attachPermission"];
         delete?: never;
@@ -344,7 +344,7 @@ export interface paths {
         post?: never;
         /**
          * Detach a permission from a role
-         * @description Remaining permissions stay. Every person assigned the role uses the updated combined set on their next request. Refused when the change would leave zero signed-in people whose combined permissions include access_administration. Requires access_administration.
+         * @description Remaining permissions stay. Every person assigned the role uses the updated combined set on their next request. Refused when the change would leave zero signed-in people whose combined permissions include manage_users. Requires manage_roles.
          */
         delete: operations["detachPermission"];
         options?: never;
@@ -361,7 +361,7 @@ export interface paths {
         };
         /**
          * Existing permission types
-         * @description Requires access_administration. Read-only catalog of permission types that roles may attach, grouped by module. Each row is module-level when action is omitted. Creating, renaming, or deleting permission types is not available.
+         * @description Requires manage_permissions. Read-only catalog of permission types that roles may attach, grouped by module. Each row is module-level when action is omitted. Creating, renaming, or deleting permission types is not available.
          */
         get: operations["listPermissions"];
         put?: never;
@@ -408,15 +408,11 @@ export interface components {
         Permission: {
             /** Format: uuid */
             id: string;
-            /** @description Stable code used in authorization checks. Exact match only. */
-            code: string;
-            /** @description Display label. */
+            /** @description Display label (Permission Name). */
             name: string;
-            /** @description Module this permission belongs to (e.g. settings, finance, hr, pmo). Not a closed enum. Catalog grouping only; not an authorization key. */
-            module: string;
-            /** @description Omitted or null means a whole-module grant. Later rows may set a more specific action (e.g. create, view). A module-level grant does not imply child codes. */
-            action?: string;
-            /** @description Optional human-readable explanation shown in the Permissions catalog. */
+            /** @description Stable key used in authorization checks. Exact match only. */
+            permission: string;
+            /** @description Optional human-readable explanation. */
             description?: string;
         };
         Role: {
@@ -482,12 +478,16 @@ export interface components {
         RolesResponse: {
             roles: components["schemas"]["Role"][];
         };
-        PermissionsResponse: {
+        PermissionModuleGroup: {
+            /** @description Catalog grouping key (e.g. settings). Not an authorization key. */
+            module: string;
             permissions: components["schemas"]["Permission"][];
         };
+        PermissionsResponse: {
+            modules: components["schemas"]["PermissionModuleGroup"][];
+        };
         AssignRoleRequest: {
-            /** Format: uuid */
-            roleId: string;
+            roleIds: string[];
         };
         CreateInviteRequest: {
             /** @description Organizational work email. Matching on sign-in is case-insensitive. */
@@ -744,7 +744,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -782,7 +782,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -824,7 +824,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -877,7 +877,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -904,7 +904,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "code": "last_admin_required",
-                     *       "message": "At least one person with access administration must remain."
+                     *       "message": "At least one person with manage_users must remain."
                      *     }
                      */
                     "application/json": components["schemas"]["ErrorResponse"];
@@ -912,7 +912,7 @@ export interface operations {
             };
         };
     };
-    assignRole: {
+    assignRoles: {
         parameters: {
             query?: never;
             header?: never;
@@ -945,7 +945,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1010,7 +1010,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1037,7 +1037,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "code": "last_admin_required",
-                     *       "message": "At least one person with access administration must remain."
+                     *       "message": "At least one person with manage_users must remain."
                      *     }
                      */
                     "application/json": components["schemas"]["ErrorResponse"];
@@ -1076,7 +1076,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1132,7 +1132,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1152,7 +1152,7 @@ export interface operations {
             };
         };
     };
-    assignInviteRole: {
+    assignInviteRoles: {
         parameters: {
             query?: never;
             header?: never;
@@ -1185,7 +1185,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1250,7 +1250,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1297,7 +1297,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1359,7 +1359,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1427,7 +1427,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1492,7 +1492,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1519,7 +1519,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "code": "last_admin_required",
-                     *       "message": "At least one person with access administration must remain."
+                     *       "message": "At least one person with manage_users must remain."
                      *     }
                      */
                     "application/json": components["schemas"]["ErrorResponse"];
@@ -1554,7 +1554,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Combined permissions do not include access_administration. */
+            /** @description Combined permissions do not include the required manage_* permission. */
             403: {
                 headers: {
                     [name: string]: unknown;

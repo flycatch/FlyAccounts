@@ -60,7 +60,7 @@ def duplicate_assignment(message: str = "That role is already assigned.") -> Api
 
 
 def last_admin_required(
-    message: str = "At least one person with access administration must remain.",
+    message: str = "At least one person with manage users must remain.",
 ) -> ApiError:
     return ApiError(409, ERROR_LAST_ADMIN_REQUIRED, message)
 

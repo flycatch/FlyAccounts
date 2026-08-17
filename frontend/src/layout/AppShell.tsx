@@ -4,28 +4,44 @@ import { PageHeader } from "./PageHeader";
 import { Sidebar } from "./Sidebar";
 import "./AppShell.css";
 
-export type SettingsView = "home" | "users" | "roles" | "permissions";
-
-const PAGE_TITLES: Record<SettingsView, string> = {
-  home: "Home",
-  users: "Users",
-  roles: "Roles",
-  permissions: "Permissions",
-};
+function titleForPath(pathname: string): string {
+  if (pathname.startsWith("/settings/users")) {
+    return "Users";
+  }
+  if (pathname.startsWith("/settings/roles")) {
+    return "Roles";
+  }
+  if (pathname.startsWith("/settings/permissions")) {
+    return "Permissions";
+  }
+  return "Home";
+}
 
 type AppShellProps = {
-  current: SettingsView;
+  pathname: string;
   showSettings: boolean;
-  onNavigate: (view: SettingsView) => void;
+  canUsers: boolean;
+  canRoles: boolean;
+  canPermissions: boolean;
+  onNavigate: (path: string) => void;
   onSignOut: () => void;
   children: ReactNode;
 };
 
-export function AppShell({ current, showSettings, onNavigate, onSignOut, children }: AppShellProps) {
+export function AppShell({
+  pathname,
+  showSettings,
+  canUsers,
+  canRoles,
+  canPermissions,
+  onNavigate,
+  onSignOut,
+  children,
+}: AppShellProps) {
   const [open, setOpen] = useState(false);
 
-  function navigate(view: SettingsView) {
-    onNavigate(view);
+  function navigate(path: string) {
+    onNavigate(path);
     setOpen(false);
   }
 
@@ -41,15 +57,18 @@ export function AppShell({ current, showSettings, onNavigate, onSignOut, childre
         Menu
       </button>
       <Sidebar
-        current={current}
+        pathname={pathname}
         showSettings={showSettings}
+        canUsers={canUsers}
+        canRoles={canRoles}
+        canPermissions={canPermissions}
         open={open}
         onNavigate={navigate}
         onSignOut={onSignOut}
       />
       <main className="app-shell-content">
         <div className="app-shell-header-wrap">
-          <PageHeader title={PAGE_TITLES[current]} />
+          <PageHeader title={titleForPath(pathname)} />
         </div>
         <div className="app-shell-main">{children}</div>
       </main>

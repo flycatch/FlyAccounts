@@ -272,7 +272,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -304,7 +304,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -339,7 +339,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -382,7 +382,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -436,7 +436,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -488,7 +488,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -543,7 +543,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -594,7 +594,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -639,7 +639,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -688,7 +688,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -733,7 +733,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -777,7 +777,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -840,7 +840,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -869,7 +869,7 @@ paths:
         Remaining permissions stay. Every person assigned the role uses the
         updated combined set on their next request. Refused when the change
         would leave zero signed-in people whose combined permissions include
-        manage_users. Requires manage_users.
+        manage_users. Requires manage_roles.
       tags:
         - Settings
       security:
@@ -891,7 +891,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:
@@ -939,7 +939,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Combined permissions do not include manage_users.
+          description: Combined permissions do not include the required manage_* permission.
           content:
             application/json:
               schema:

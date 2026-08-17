@@ -1,16 +1,27 @@
 import brandIcon from "../assets/icons/sms-tracking.svg";
 
-type SettingsView = "home" | "users" | "roles" | "permissions";
-
 type SidebarProps = {
-  current: SettingsView;
+  pathname: string;
   showSettings: boolean;
+  canUsers: boolean;
+  canRoles: boolean;
+  canPermissions: boolean;
   open?: boolean;
-  onNavigate: (view: SettingsView) => void;
+  onNavigate: (path: string) => void;
   onSignOut: () => void;
 };
 
-export function Sidebar({ current, showSettings, open = false, onNavigate, onSignOut }: SidebarProps) {
+export function Sidebar({
+  pathname,
+  showSettings,
+  canUsers,
+  canRoles,
+  canPermissions,
+  open = false,
+  onNavigate,
+  onSignOut,
+}: SidebarProps) {
+  const homeActive = pathname === "/";
   return (
     <aside className={`app-shell-sidebar${open ? " is-open" : ""}`} id="app-sidebar">
       <p className="app-shell-brand">
@@ -20,35 +31,41 @@ export function Sidebar({ current, showSettings, open = false, onNavigate, onSig
       <nav className="app-shell-nav" aria-label="Application">
         <button
           type="button"
-          className={`app-shell-nav-item${current === "home" ? " is-active" : ""}`}
-          onClick={() => onNavigate("home")}
+          className={`app-shell-nav-item${homeActive ? " is-active" : ""}`}
+          onClick={() => onNavigate("/")}
         >
           Home
         </button>
         {showSettings ? (
           <>
             <p className="app-shell-nav-group">Settings</p>
-            <button
-              type="button"
-              className={`app-shell-nav-item${current === "users" ? " is-active" : ""}`}
-              onClick={() => onNavigate("users")}
-            >
-              Users
-            </button>
-            <button
-              type="button"
-              className={`app-shell-nav-item${current === "roles" ? " is-active" : ""}`}
-              onClick={() => onNavigate("roles")}
-            >
-              Roles
-            </button>
-            <button
-              type="button"
-              className={`app-shell-nav-item${current === "permissions" ? " is-active" : ""}`}
-              onClick={() => onNavigate("permissions")}
-            >
-              Permissions
-            </button>
+            {canUsers ? (
+              <button
+                type="button"
+                className={`app-shell-nav-item${pathname.startsWith("/settings/users") ? " is-active" : ""}`}
+                onClick={() => onNavigate("/settings/users")}
+              >
+                Users
+              </button>
+            ) : null}
+            {canRoles ? (
+              <button
+                type="button"
+                className={`app-shell-nav-item${pathname.startsWith("/settings/roles") ? " is-active" : ""}`}
+                onClick={() => onNavigate("/settings/roles")}
+              >
+                Roles
+              </button>
+            ) : null}
+            {canPermissions ? (
+              <button
+                type="button"
+                className={`app-shell-nav-item${pathname.startsWith("/settings/permissions") ? " is-active" : ""}`}
+                onClick={() => onNavigate("/settings/permissions")}
+              >
+                Permissions
+              </button>
+            ) : null}
           </>
         ) : null}
       </nav>

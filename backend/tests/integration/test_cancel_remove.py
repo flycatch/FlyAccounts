@@ -12,7 +12,7 @@ pytestmark = pytest.mark.skipif(
 
 def test_cancelled_or_removed_email_may_sign_in_and_be_invited_again(client, db):
     admin = create_user(db, upn="admin@contoso.com")
-    assign_role(db, admin, role_by_name(db, "Entity Admin"))
+    assign_role(db, admin, role_by_name(db, "System Admin"))
     invite = create_invite(db, email="return@contoso.com", invited_by=admin)
     person = create_user(db, upn="gone@contoso.com")
     db.commit()

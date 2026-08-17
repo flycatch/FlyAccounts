@@ -18,8 +18,6 @@ import "../../components/settings.css";
 type Person = components["schemas"]["Person"];
 type Role = components["schemas"]["Role"];
 
-type ActiveModal = "invite" | "assign" | null;
-
 function statusLabel(status: Person["status"]): string {
   if (status === "active") {
     return "Active";
@@ -43,7 +41,7 @@ function errorMessage(payload: unknown, fallback: string): string {
       return "That person is already listed.";
     }
     if (code === "last_admin_required") {
-      return "At least one person with access administration must remain.";
+      return "At least one person with manage users must remain.";
     }
     if (code === "role_still_assigned") {
       return "That role is still assigned to a person.";
@@ -56,11 +54,10 @@ export function UsersPage() {
   const [people, setPeople] = useState<Person[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [assignUserId, setAssignUserId] = useState("");
-  const [assignRoleId, setAssignRoleId] = useState("");
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRoleId, setInviteRoleId] = useState("");
-  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +70,7 @@ export function UsersPage() {
       setPeople(peopleResult.data.people);
       if (selectedPersonId && !peopleResult.data.people.some((person) => person.id === selectedPersonId)) {
         setSelectedPersonId(null);
+        setSelectedRoleIds([]);
       }
     }
     if (rolesResult.data) {
@@ -85,52 +83,43 @@ export function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on mount only
   }, []);
 
-  function closeModal() {
-    setActiveModal(null);
-  }
-
   function openInvite() {
     setError(null);
     setMessage(null);
     setInviteEmail("");
     setInviteRoleId("");
-    setActiveModal("invite");
+    setInviteOpen(true);
   }
 
-  function openAssign() {
-    setError(null);
-    setMessage(null);
-    setAssignUserId("");
-    setAssignRoleId("");
-    setActiveModal("assign");
+  function toggleRoleId(roleId: string) {
+    setSelectedRoleIds((current) =>
+      current.includes(roleId) ? current.filter((id) => id !== roleId) : [...current, roleId],
+    );
   }
 
-  async function handleAssign() {
+  async function handleAssign(person: Person) {
     setError(null);
     setMessage(null);
-    if (!assignUserId || !assignRoleId) {
-      setError("Choose a person and a role to assign.");
+    if (selectedRoleIds.length === 0) {
+      setError("Choose at least one role to assign.");
       return;
     }
-    const person = people.find((item) => item.id === assignUserId);
     const result =
-      person?.personType === "invite"
+      person.personType === "invite"
         ? await apiClient.POST("/people/invites/{inviteId}/roles", {
-            params: { path: { inviteId: assignUserId } },
-            body: { roleId: assignRoleId },
+            params: { path: { inviteId: person.id } },
+            body: { roleIds: selectedRoleIds },
           })
         : await apiClient.POST("/people/{userId}/roles", {
-            params: { path: { userId: assignUserId } },
-            body: { roleId: assignRoleId },
+            params: { path: { userId: person.id } },
+            body: { roleIds: selectedRoleIds },
           });
     if (result.error || !result.data) {
       setError(errorMessage(result.error, "The role could not be assigned."));
       return;
     }
     setMessage("Role assigned.");
-    setAssignUserId("");
-    setAssignRoleId("");
-    setActiveModal(null);
+    setSelectedRoleIds([]);
     await load();
   }
 
@@ -152,7 +141,7 @@ export function UsersPage() {
     setMessage("Invite recorded.");
     setInviteEmail("");
     setInviteRoleId("");
-    setActiveModal(null);
+    setInviteOpen(false);
     await load();
   }
 
@@ -187,6 +176,7 @@ export function UsersPage() {
     }
     setMessage("Invite cancelled.");
     setSelectedPersonId(null);
+    setSelectedRoleIds([]);
     await load();
   }
 
@@ -202,10 +192,13 @@ export function UsersPage() {
     }
     setMessage("Person removed.");
     setSelectedPersonId(null);
+    setSelectedRoleIds([]);
     await load();
   }
 
   const selectedPerson = people.find((person) => person.id === selectedPersonId) ?? null;
+  const assignedRoleIds = new Set(selectedPerson?.roles.map((role) => role.id) ?? []);
+  const assignableRoles = roles.filter((role) => !assignedRoleIds.has(role.id));
 
   return (
     <section className="settings-page users-page">
@@ -214,23 +207,27 @@ export function UsersPage() {
         <button type="button" className="settings-primary" onClick={openInvite}>
           Invite User
         </button>
-        <button type="button" className="settings-primary" onClick={openAssign}>
-          Assign Roles
-        </button>
       </div>
-      {error && !activeModal ? <p role="alert">{error}</p> : null}
-      {message && !activeModal ? <p>{message}</p> : null}
+      {error && !inviteOpen ? <p role="alert">{error}</p> : null}
+      {message && !inviteOpen ? <p>{message}</p> : null}
 
       <MasterDetailLayout
         selected={Boolean(selectedPerson)}
-        onBack={() => setSelectedPersonId(null)}
+        onBack={() => {
+          setSelectedPersonId(null);
+          setSelectedRoleIds([]);
+        }}
         list={people.map((person) => (
           <EntityCard
             key={person.id}
             title={person.displayName ?? person.email}
             subtitle={person.email}
             selected={person.id === selectedPersonId}
-            onSelect={() => setSelectedPersonId(person.id)}
+            onSelect={() => {
+              setSelectedPersonId(person.id);
+              setSelectedRoleIds([]);
+              setError(null);
+            }}
             meta={
               <>
                 <span className={`status-chip is-${person.status}`}>{statusLabel(person.status)}</span>
@@ -280,18 +277,49 @@ export function UsersPage() {
                   </li>
                 ))}
               </ul>
+              <div className="settings-form settings-form-stack">
+                <p className="settings-assign-label">Assign roles</p>
+                {assignableRoles.length === 0 ? (
+                  <p className="settings-assign-empty">All roles are already assigned.</p>
+                ) : (
+                  <ul className="settings-role-multiselect">
+                    {assignableRoles.map((role) => (
+                      <li key={role.id}>
+                        <label className="settings-role-option">
+                          <input
+                            type="checkbox"
+                            checked={selectedRoleIds.includes(role.id)}
+                            onChange={() => toggleRoleId(role.id)}
+                          />
+                          <span>{role.name}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="settings-page-actions">
+                  <button
+                    type="button"
+                    className="settings-primary"
+                    disabled={selectedRoleIds.length === 0}
+                    onClick={() => void handleAssign(selectedPerson)}
+                  >
+                    Assign selected roles
+                  </button>
+                </div>
+              </div>
             </DetailPanel>
           ) : null
         }
       />
 
       <Modal
-        open={activeModal === "invite"}
+        open={inviteOpen}
         title="Invite User"
-        onClose={closeModal}
+        onClose={() => setInviteOpen(false)}
         footer={
           <>
-            <button type="button" className="settings-secondary" onClick={closeModal}>
+            <button type="button" className="settings-secondary" onClick={() => setInviteOpen(false)}>
               Cancel
             </button>
             <button type="submit" form="invite-user-form" className="settings-primary">
@@ -329,60 +357,7 @@ export function UsersPage() {
               </option>
             ))}
           </SelectField>
-          {error && activeModal === "invite" ? <p role="alert">{error}</p> : null}
-        </form>
-      </Modal>
-
-      <Modal
-        open={activeModal === "assign"}
-        title="Assign Roles"
-        onClose={closeModal}
-        footer={
-          <>
-            <button type="button" className="settings-secondary" onClick={closeModal}>
-              Cancel
-            </button>
-            <button type="submit" form="assign-roles-form" className="settings-primary">
-              Assign role
-            </button>
-          </>
-        }
-      >
-        <form
-          id="assign-roles-form"
-          className="settings-form settings-form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleAssign();
-          }}
-        >
-          <SelectField
-            label="Person"
-            name="assign-person"
-            value={assignUserId}
-            onChange={(event) => setAssignUserId(event.target.value)}
-          >
-            <option value="">Select a person</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.displayName ?? person.email} ({person.email})
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            label="Role"
-            name="assign-role"
-            value={assignRoleId}
-            onChange={(event) => setAssignRoleId(event.target.value)}
-          >
-            <option value="">Select a role</option>
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </SelectField>
-          {error && activeModal === "assign" ? <p role="alert">{error}</p> : null}
+          {error && inviteOpen ? <p role="alert">{error}</p> : null}
         </form>
       </Modal>
     </section>
