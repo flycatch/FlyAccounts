@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0010_resources"
-down_revision: Union[str, None] = "0009_clients"
+down_revision: Union[str, None] = "0010_remove_contract_client"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

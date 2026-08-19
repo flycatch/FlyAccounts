@@ -19,8 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_index("ix_contracts_client_id", table_name="contracts")
-    op.drop_column("contracts", "client_id")
+    op.execute("DROP INDEX IF EXISTS ix_contracts_client_id")
+    op.execute("ALTER TABLE contracts DROP COLUMN IF EXISTS client_id")
 
 
 def downgrade() -> None:

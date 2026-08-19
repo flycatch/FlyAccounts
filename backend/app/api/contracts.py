@@ -134,7 +134,6 @@ def next_contract_reference(db: Session, entity_id: uuid.UUID) -> str:
     refs = db.scalars(
         select(Contract.reference).where(
             Contract.entity_id == entity_id,
-            Contract.deleted_at.is_(None),
         )
     ).all()
     max_n = 0

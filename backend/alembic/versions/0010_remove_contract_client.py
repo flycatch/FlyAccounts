@@ -1,1 +1,26 @@
-# Redundant branched file replaced by 0011_remove_contract_client.py
+"""Empty placeholder migration to preserve linear chain without file deletion.
+
+Revision ID: 0010_remove_contract_client
+Revises: 0009_clients
+Create Date: 2026-08-19
+"""
+
+from __future__ import annotations
+
+from typing import Sequence, Union
+
+import sqlalchemy as sa
+from alembic import op
+
+revision: str = "0010_remove_contract_client"
+down_revision: Union[str, None] = "0009_clients"
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    pass
+
+
+def downgrade() -> None:
+    pass
