@@ -85,3 +85,17 @@ export function emailFormat(label = "Email") {
     return undefined;
   };
 }
+
+export function requiredNumber(label: string) {
+  return (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return `${label} is required.`;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      return `${label} must be a number.`;
+    }
+    return undefined;
+  };
+}

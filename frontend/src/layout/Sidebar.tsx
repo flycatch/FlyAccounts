@@ -26,6 +26,7 @@ export function Sidebar({
   const homeActive = pathname === "/";
   const contractsActive = pathname.startsWith("/contracts");
   const clientsActive = pathname.startsWith("/clients");
+  const resourcesActive = pathname.startsWith("/resources");
   return (
     <aside className={`app-shell-sidebar${open ? " is-open" : ""}`} id="app-sidebar">
       <p className="app-shell-brand">
@@ -48,6 +49,13 @@ export function Sidebar({
               onClick={() => onNavigate("/clients")}
             >
               Clients
+            </button>
+            <button
+              type="button"
+              className={`app-shell-nav-item${resourcesActive ? " is-active" : ""}`}
+              onClick={() => onNavigate("/resources")}
+            >
+              Resources
             </button>
             <button
               type="button"

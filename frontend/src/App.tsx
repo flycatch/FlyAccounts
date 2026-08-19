@@ -15,6 +15,7 @@ import { Step1UploadPage } from "./pages/contracts/create/Step1UploadPage";
 import { Step2ClosurePage } from "./pages/contracts/create/Step2ClosurePage";
 import { Step3PaymentPage } from "./pages/contracts/create/Step3PaymentPage";
 import { PendingAccessPage } from "./pages/PendingAccessPage";
+import { ResourcesPage } from "./pages/resources/ResourcesPage";
 import { SignInPage } from "./pages/SignInPage";
 import { PermissionsPage } from "./pages/settings/PermissionsPage";
 import { RolesPage } from "./pages/settings/RolesPage";
@@ -68,6 +69,14 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
               element={
                 <SettingsGate me={me} permission="manage_contracts">
                   <ClientsPage />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/resources"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <ResourcesPage />
                 </SettingsGate>
               }
             />

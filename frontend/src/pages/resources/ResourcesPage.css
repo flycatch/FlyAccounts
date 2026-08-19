@@ -1,0 +1,37 @@
+.resources-page .ui-modal {
+  max-width: 32rem;
+}
+
+.resources-sort-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.resources-sort-btn:hover {
+  color: var(--color-primary);
+}
+
+.resources-allocation {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.resources-over-pill {
+  display: inline-flex;
+  align-items: center;
+  height: var(--pill-height);
+  padding: 0 var(--pill-padding-x);
+  border-radius: var(--radius-pill);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: var(--pill-font-size);
+  font-weight: var(--font-weight-semibold);
+}

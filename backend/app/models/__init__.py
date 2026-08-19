@@ -5,6 +5,7 @@ from app.models.entity import LegalEntity
 from app.models.invite import Invite, InviteRole
 from app.models.rbac import Permission, Role, RoleAssignment, RolePermission
 from app.models.refresh_token import RefreshToken
+from app.models.resource import Resource
 from app.models.user import User
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "LegalEntity",
     "Permission",
     "RefreshToken",
+    "Resource",
     "Role",
     "RoleAssignment",
     "RolePermission",

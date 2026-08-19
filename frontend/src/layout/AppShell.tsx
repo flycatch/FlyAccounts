@@ -15,6 +15,9 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith("/clients")) {
     return "Clients";
   }
+  if (pathname.startsWith("/resources")) {
+    return "Resources";
+  }
   if (pathname.startsWith("/settings/users")) {
     return "Users";
   }

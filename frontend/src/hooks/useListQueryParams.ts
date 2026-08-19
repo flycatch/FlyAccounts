@@ -4,6 +4,8 @@ import { useSearchParams } from "react-router-dom";
 export const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
+export type SortOrder = "asc" | "desc";
+
 function parsePage(value: string | null): number {
   const parsed = Number(value ?? "1");
   return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 1;
@@ -17,11 +19,20 @@ function parsePageSize(value: string | null): PageSize {
   return 10;
 }
 
-export function useListQueryParams(options?: { extraKeys?: string[] }) {
+function parseSortOrder(value: string | null): SortOrder {
+  return value === "desc" ? "desc" : "asc";
+}
+
+export function useListQueryParams(options?: {
+  extraKeys?: string[];
+  defaultSortBy?: string;
+}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("search") ?? "";
   const page = parsePage(searchParams.get("page"));
   const pageSize = parsePageSize(searchParams.get("pageSize"));
+  const sortBy = searchParams.get("sortBy") ?? options?.defaultSortBy ?? "";
+  const sortOrder = parseSortOrder(searchParams.get("sortOrder"));
   const [searchInput, setSearchInput] = useState(search);
 
   useEffect(() => {
@@ -81,6 +92,28 @@ export function useListQueryParams(options?: { extraKeys?: string[] }) {
     [setSearchParams],
   );
 
+  const setSort = useCallback(
+    (column: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        const currentBy = prev.get("sortBy") ?? options?.defaultSortBy ?? "";
+        const currentOrder = parseSortOrder(prev.get("sortOrder"));
+        if (currentBy === column) {
+          next.set("sortOrder", currentOrder === "asc" ? "desc" : "asc");
+        } else {
+          next.set("sortBy", column);
+          next.set("sortOrder", "asc");
+        }
+        next.set("page", "1");
+        if (!next.get("pageSize")) {
+          next.set("pageSize", String(pageSize));
+        }
+        return next;
+      });
+    },
+    [options?.defaultSortBy, pageSize, setSearchParams],
+  );
+
   const setExtra = useCallback(
     (key: string, value: string | null) => {
       setSearchParams((prev) => {
@@ -113,6 +146,9 @@ export function useListQueryParams(options?: { extraKeys?: string[] }) {
     pageSize,
     setPage,
     setPageSize,
+    sortBy,
+    sortOrder,
+    setSort,
     setExtra,
     extras,
     searchParams,
