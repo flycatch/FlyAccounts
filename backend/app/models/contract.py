@@ -45,6 +45,7 @@ class Contract(Base):
     client_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     client_file_content_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
     client_file_size_bytes: Mapped[int | None] = mapped_column(Integer(), nullable=True)
+
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
@@ -52,6 +53,11 @@ class Contract(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     entity: Mapped["LegalEntity"] = relationship(back_populates="contracts")
+
+    parent: Mapped["Contract | None"] = relationship(
+        foreign_keys=[parent_contract_id],
+        remote_side=[id],
+    )
     closure_owner: Mapped["User | None"] = relationship(foreign_keys=[closure_owner_user_id])
     created_by: Mapped["User"] = relationship(foreign_keys=[created_by_user_id])
     milestones: Mapped[list["ContractMilestone"]] = relationship(

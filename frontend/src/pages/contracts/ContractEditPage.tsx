@@ -1,23 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 
 import type { components } from "../../api/schema";
 import { apiClient } from "../../api/client";
 import { PillToggle } from "../../components/PillToggle";
 import { SelectField } from "../../components/SelectField";
+import { TextareaField } from "../../components/TextareaField";
 import { TextField } from "../../components/TextField";
 import { useEntityContext } from "../../entity/EntityContext";
+import { MilestonesTable, type MilestoneDraft } from "./MilestonesTable";
 import "./ContractsPage.css";
 import "./create/ContractCreate.css";
 
 type MeResponse = components["schemas"]["MeResponse"];
 type ContractDetail = components["schemas"]["ContractDetail"];
-
-type MilestoneDraft = {
-  name: string;
-  value: string;
-  dueConditionOrDate: string;
-};
 
 const STATUSES = [
   { value: "active", label: "Active" },
@@ -51,14 +47,14 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
   const [paymentType, setPaymentType] = useState<"project_value" | "monthly">("project_value");
   const [projectValue, setProjectValue] = useState("");
   const [monthlyRate, setMonthlyRate] = useState("");
-  const [months, setMonths] = useState("1");
-  const [milestones, setMilestones] = useState<MilestoneDraft[]>([
-    { name: "", value: "", dueConditionOrDate: "" },
-  ]);
+  const [months, setMonths] = useState("");
+  const [milestones, setMilestones] = useState<MilestoneDraft[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isTimeAndMaterial = contract?.category === "time_and_material";
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +81,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
       if (ownersRes.response.ok && ownersRes.data) {
         setOwners(ownersRes.data.owners);
       }
+
       setClosureOwnerUserId(data.closureOwnerUserId ?? me.id);
       setStartDate(data.startDate ?? "");
       setEndDate(data.endDate ?? "");
@@ -97,8 +94,8 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
       }
       setProjectValue(data.projectValue ?? "");
       setMonthlyRate(data.monthlyRate ?? "");
-      setMonths(data.months ? String(data.months) : "1");
-      if (data.milestones && data.milestones.length > 0) {
+      setMonths(data.months ? String(data.months) : "");
+      if (data.category === "time_and_material" && data.milestones && data.milestones.length > 0) {
         setMilestones(
           data.milestones.map((item) => ({
             name: item.name,
@@ -106,6 +103,8 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
             dueConditionOrDate: item.dueConditionOrDate,
           })),
         );
+      } else {
+        setMilestones([]);
       }
       setLoading(false);
     }
@@ -115,17 +114,21 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
     };
   }, [contractId, entityHeaderValue, me.id]);
 
-  const cumulativeValues = useMemo(() => {
-    let running = 0;
-    return milestones.map((item) => {
-      const amount = Number.parseFloat(item.value || "0");
-      running += Number.isFinite(amount) ? amount : 0;
-      return running.toFixed(2);
-    });
-  }, [milestones]);
+  function handlePaymentTypeChange(next: "project_value" | "monthly") {
+    setPaymentType(next);
+    if (next === "project_value") {
+      setMonthlyRate("");
+      setMonths("");
+      setFieldErrors((prev) => ({ ...prev, monthlyRate: "", months: "" }));
+    } else {
+      setProjectValue("");
+      setFieldErrors((prev) => ({ ...prev, projectValue: "" }));
+    }
+  }
 
   function validate(): boolean {
     const next: Record<string, string> = {};
+
     if (!closureOwnerUserId) {
       next.owner = "Closure owner is required.";
     }
@@ -144,14 +147,14 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
       }
       if (paymentType === "monthly") {
         if (!monthlyRate.trim()) {
-          next.monthlyRate = "Monthly rate is required.";
+          next.monthlyRate = "Monthly payment amount is required.";
         }
         if (!months.trim() || Number.parseInt(months, 10) < 1) {
-          next.months = "Number of months is required.";
+          next.months = "Months is required.";
         }
       }
     }
-    if (contract?.category === "time_and_material") {
+    if (isTimeAndMaterial) {
       if (!milestones.some((row) => row.name.trim())) {
         next.milestones = "Add at least one milestone for Time & Material.";
       }
@@ -172,20 +175,23 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
     setSubmitting(true);
     setError(null);
     const body: components["schemas"]["UpdateContractRequest"] = {
+
       closureOwnerUserId,
       startDate,
       endDate,
       projectStatus,
       pmoNote: pmoNote || undefined,
       paymentType,
-      milestones: milestones
-        .filter((item) => item.name.trim())
-        .map((item, index) => ({
-          name: item.name.trim(),
-          value: canViewFinancials ? item.value || "0" : "0",
-          dueConditionOrDate: item.dueConditionOrDate || startDate,
-          sortOrder: index,
-        })),
+      milestones: isTimeAndMaterial
+        ? milestones
+            .filter((item) => item.name.trim())
+            .map((item, index) => ({
+              name: item.name.trim(),
+              value: canViewFinancials ? item.value || "0" : "0",
+              dueConditionOrDate: item.dueConditionOrDate || startDate,
+              sortOrder: index,
+            }))
+        : [],
       complete: contract?.isDraft ? true : undefined,
     };
     if (canViewFinancials) {
@@ -250,13 +256,16 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
           {CATEGORY_LABELS[contract.category] ?? contract.category} · {contract.currency} ·{" "}
           {contract.isAmendment ? "Amendment" : "Original"} · Reference {contract.reference}{" "}
           (read-only)
+          {contract.isAmendment && contract.parentContractReference
+            ? ` · Parent ${contract.parentContractReference}`
+            : ""}
         </p>
       </section>
 
       <section className="contract-detail-section contract-create-fields">
-        <h3>Closure & period</h3>
+        <h3>Closure</h3>
         <SelectField
-          label="Closure owner"
+          label="Closure Owner"
           value={closureOwnerUserId}
           error={fieldErrors.owner}
           onChange={(event) => {
@@ -276,7 +285,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
           ))}
         </SelectField>
         <TextField
-          label="Start date"
+          label="Contract Period Start Date"
           type="date"
           value={startDate}
           error={fieldErrors.startDate}
@@ -291,7 +300,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
           }}
         />
         <TextField
-          label="End date"
+          label="Contract Period End Date"
           type="date"
           value={endDate}
           error={fieldErrors.endDate}
@@ -311,33 +320,35 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
           }}
         />
         <PillToggle
-          label="Project status"
+          label="Project Status"
           value={projectStatus}
           options={STATUSES}
           onChange={setProjectStatus}
         />
-        <TextField
-          label="PMO note"
+        <TextareaField
+          label="PMO Note"
           value={pmoNote}
           onChange={(event) => setPmoNote(event.target.value)}
+          rows={3}
         />
       </section>
 
       <section className="contract-detail-section contract-create-fields">
         <h3>Payment & milestones</h3>
         <PillToggle
-          label="Payment type"
+          label="Payment Type"
           value={paymentType}
           options={[
             { value: "project_value", label: "Project Value" },
             { value: "monthly", label: "Monthly × Months" },
           ]}
-          onChange={setPaymentType}
+          onChange={handlePaymentTypeChange}
         />
         {canViewFinancials ? (
           paymentType === "project_value" ? (
             <TextField
               label="Total project value"
+              type="number"
               value={projectValue}
               error={fieldErrors.projectValue}
               onChange={(event) => {
@@ -356,7 +367,8 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
           ) : (
             <>
               <TextField
-                label="Monthly rate"
+                label="Monthly Payment Amount"
+                type="number"
                 value={monthlyRate}
                 error={fieldErrors.monthlyRate}
                 onChange={(event) => {
@@ -367,13 +379,13 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
                   if (!monthlyRate.trim()) {
                     setFieldErrors((prev) => ({
                       ...prev,
-                      monthlyRate: "Monthly rate is required.",
+                      monthlyRate: "Monthly payment amount is required.",
                     }));
                   }
                 }}
               />
               <TextField
-                label="Number of months"
+                label="Months"
                 type="number"
                 value={months}
                 error={fieldErrors.months}
@@ -385,7 +397,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
                   if (!months.trim() || Number.parseInt(months, 10) < 1) {
                     setFieldErrors((prev) => ({
                       ...prev,
-                      months: "Number of months is required.",
+                      months: "Months is required.",
                     }));
                   }
                 }}
@@ -396,94 +408,17 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
           <p className="contract-hint">Payment amounts are hidden for your role.</p>
         )}
 
-        <div>
-          <div className="contract-milestones-header">
-            <h4>Milestones</h4>
-            <button
-              type="button"
-              onClick={() =>
-                setMilestones((rows) => [...rows, { name: "", value: "", dueConditionOrDate: "" }])
-              }
-            >
-              + Add Milestone
-            </button>
-          </div>
-          {fieldErrors.milestones ? (
-            <span className="ui-field-error">{fieldErrors.milestones}</span>
-          ) : null}
-          <div className="contracts-table-wrap">
-            <table className="contracts-table" data-testid="milestones-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  {canViewFinancials ? <th>Value</th> : null}
-                  <th>Due condition</th>
-                  {canViewFinancials ? <th>Cumulative</th> : null}
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {milestones.map((row, index) => (
-                  <tr key={index}>
-                    <td>
-                      <input
-                        className="ui-control"
-                        value={row.name}
-                        onChange={(event) =>
-                          setMilestones((rows) =>
-                            rows.map((item, i) =>
-                              i === index ? { ...item, name: event.target.value } : item,
-                            ),
-                          )
-                        }
-                      />
-                    </td>
-                    {canViewFinancials ? (
-                      <td>
-                        <input
-                          className="ui-control"
-                          value={row.value}
-                          onChange={(event) =>
-                            setMilestones((rows) =>
-                              rows.map((item, i) =>
-                                i === index ? { ...item, value: event.target.value } : item,
-                              ),
-                            )
-                          }
-                        />
-                      </td>
-                    ) : null}
-                    <td>
-                      <input
-                        className="ui-control"
-                        value={row.dueConditionOrDate}
-                        onChange={(event) =>
-                          setMilestones((rows) =>
-                            rows.map((item, i) =>
-                              i === index
-                                ? { ...item, dueConditionOrDate: event.target.value }
-                                : item,
-                            ),
-                          )
-                        }
-                      />
-                    </td>
-                    {canViewFinancials ? <td>{cumulativeValues[index]}</td> : null}
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => setMilestones((rows) => rows.filter((_, i) => i !== index))}
-                        disabled={milestones.length === 1}
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {isTimeAndMaterial ? (
+          <MilestonesTable
+            milestones={milestones}
+            canViewFinancials={canViewFinancials}
+            error={fieldErrors.milestones}
+            onChange={(rows) => {
+              setMilestones(rows);
+              setFieldErrors((prev) => ({ ...prev, milestones: "" }));
+            }}
+          />
+        ) : null}
       </section>
 
       <div className="contract-create-footer">

@@ -119,6 +119,7 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
         headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
     )
     assert listed.status_code == 200
+    assert listed.json()["total"] >= 1
     rows = [item for item in listed.json()["contracts"] if item["reference"] == "CTR-0001"]
     assert len(rows) == 1
 
@@ -306,3 +307,24 @@ def test_upload_contract_file_mocked(client, db: Session, monkeypatch):
     assert body["fileKey"].endswith("demo.pdf")
     assert body["fileName"] == "demo.pdf"
     assert body["sizeBytes"] == 8
+
+
+def test_upload_contract_doc_file_accepted(client, db: Session, monkeypatch):
+    admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
+    assign_role(db, admin, role_by_name(db, "System Admin"))
+    entity_a = _entity(db, "entity_a")
+    db.commit()
+
+    monkeypatch.setattr(
+        "app.api.contracts.upload_bytes",
+        lambda **kwargs: f"contracts/{uuid.uuid4()}/legacy.doc",
+    )
+
+    response = client.post(
+        "/v1/contracts/files",
+        headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
+        files={"file": ("legacy.doc", BytesIO(b"DOC"), "application/msword")},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["fileName"] == "legacy.doc"

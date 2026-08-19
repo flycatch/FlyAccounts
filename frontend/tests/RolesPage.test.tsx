@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
 const get = vi.fn();
@@ -16,6 +17,17 @@ vi.mock("../src/api/client", () => ({
 }));
 
 import { RolesPage } from "../src/pages/settings/RolesPage";
+import { ToastProvider } from "../src/toast/ToastProvider";
+
+function renderRoles() {
+  return render(
+    <MemoryRouter>
+      <ToastProvider>
+        <RolesPage />
+      </ToastProvider>
+    </MemoryRouter>,
+  );
+}
 
 const permissions = [
   { id: "perm-hr", permission: "manage_roles", name: "Manage roles" },
@@ -45,7 +57,7 @@ describe("RolesPage", () => {
           response: { ok: true },
         });
       }
-      return Promise.resolve({ data: { roles }, error: undefined, response: { ok: true } });
+      return Promise.resolve({ data: { roles, page: 1, pageSize: 10, total: roles.length }, error: undefined, response: { ok: true } });
     });
   });
 
@@ -59,7 +71,7 @@ describe("RolesPage", () => {
   }
 
   it("shows roles as cards and opens detail only after selection", async () => {
-    render(<RolesPage />);
+    renderRoles();
     expect(await screen.findByText("Custom")).toBeInTheDocument();
     expect(screen.queryByLabelText(/attach permission/i)).not.toBeInTheDocument();
     selectRole(/custom/i);
@@ -68,7 +80,7 @@ describe("RolesPage", () => {
   });
 
   it("keeps create-role name focused while typing in the modal", async () => {
-    render(<RolesPage />);
+    renderRoles();
     await screen.findByText("Custom");
     await openCreateModal();
     const nameField = screen.getByLabelText(/^role name$/i);
@@ -104,7 +116,7 @@ describe("RolesPage", () => {
       response: { ok: true },
     });
 
-    render(<RolesPage />);
+    renderRoles();
     expect(await screen.findByText("Custom")).toBeInTheDocument();
     await openCreateModal();
     fireEvent.change(screen.getByLabelText(/^role name$/i), { target: { value: "Ops" } });
@@ -138,7 +150,7 @@ describe("RolesPage", () => {
       error: { code: "role_still_assigned", message: "That role is still assigned to a person." },
       response: { ok: false, status: 409 },
     });
-    render(<RolesPage />);
+    renderRoles();
     await screen.findByText("Custom");
     selectRole(/custom/i);
     fireEvent.click(screen.getByRole("button", { name: /delete custom/i }));

@@ -43,6 +43,13 @@
   cursor: not-allowed;
 }
 
+.ui-textarea {
+  height: auto;
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
 .ui-field-error {
   margin: 0;
   font-family: var(--font-body);

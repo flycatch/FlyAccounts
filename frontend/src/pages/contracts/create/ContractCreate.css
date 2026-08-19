@@ -179,6 +179,40 @@
   border-radius: var(--radius-control);
   background: var(--color-box);
   text-align: center;
+  cursor: pointer;
+}
+
+.contract-file-drop.is-dragging {
+  border-color: var(--color-primary);
+  background: var(--color-nav-active);
+}
+
+.contract-file-drop.is-invalid {
+  border-color: var(--color-danger);
+}
+
+.contract-file-drop:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.contract-amendment-toggle {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-black);
+}
+
+.contract-amendment-toggle input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .contract-file-preview {

@@ -21,6 +21,8 @@ ERROR_VALIDATION = "validation_error"
 ERROR_ENTITY_CONTEXT_REQUIRED = "entity_context_required"
 ERROR_INVALID_CURRENCY = "invalid_currency"
 ERROR_INVALID_FILE_TYPE = "invalid_file_type"
+ERROR_CLIENT_IN_USE = "client_in_use"
+ERROR_DUPLICATE_CLIENT_NAME = "duplicate_client_name"
 
 
 class ApiError(Exception):
@@ -103,8 +105,16 @@ def invalid_currency(message: str = "That currency is not allowed for this entit
     return ApiError(400, ERROR_INVALID_CURRENCY, message)
 
 
-def invalid_file_type(message: str = "Only .pdf and .docx files are accepted.") -> ApiError:
+def invalid_file_type(message: str = "Only .pdf, .doc, and .docx files are accepted.") -> ApiError:
     return ApiError(400, ERROR_INVALID_FILE_TYPE, message)
+
+
+def client_in_use(message: str = "This client is linked to contracts and cannot be deleted.") -> ApiError:
+    return ApiError(409, ERROR_CLIENT_IN_USE, message)
+
+
+def duplicate_client_name(message: str = "A client with that name already exists.") -> ApiError:
+    return ApiError(409, ERROR_DUPLICATE_CLIENT_NAME, message)
 
 
 async def api_error_handler(_request: Request, exc: ApiError) -> JSONResponse:

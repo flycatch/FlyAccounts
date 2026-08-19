@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.client import Client
 from app.models.contract import Contract, ContractMilestone, ContractResource
 from app.models.entity import LegalEntity
 from app.models.invite import Invite, InviteRole
@@ -8,6 +9,7 @@ from app.models.user import User
 
 __all__ = [
     "Base",
+    "Client",
     "Contract",
     "ContractMilestone",
     "ContractResource",

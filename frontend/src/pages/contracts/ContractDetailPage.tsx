@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { components } from "../../api/schema";
 import { apiClient } from "../../api/client";
 import { useEntityContext } from "../../entity/EntityContext";
+import { apiErrorMessage, useToast } from "../../toast/ToastProvider";
 import "./ContractsPage.css";
 
 type MeResponse = components["schemas"]["MeResponse"];
@@ -29,6 +30,7 @@ type ContractDetailPageProps = {
 export function ContractDetailPage({ me }: ContractDetailPageProps) {
   const { contractId = "" } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const { entityHeaderValue, isAllEntities } = useEntityContext();
   const canViewFinancials = me.permissions.includes("view_contract_financials");
   const canDelete =
@@ -70,21 +72,22 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
       return;
     }
     if (isAllEntities) {
-      setError("Select a single entity to delete a contract.");
+      toast.error("Select a single entity to delete a contract.");
       return;
     }
     setDeleting(true);
-    const { response } = await apiClient.DELETE("/contracts/{contractId}", {
+    const { error: apiError, response } = await apiClient.DELETE("/contracts/{contractId}", {
       params: {
         path: { contractId },
         header: { "X-Entity-Id": entityHeaderValue },
       },
     });
     setDeleting(false);
-    if (!response.ok) {
-      setError("Could not delete contract.");
+    if (!response.ok || apiError) {
+      toast.error(apiErrorMessage(apiError, "Could not delete contract."));
       return;
     }
+    toast.success("Contract deleted.");
     navigate("/contracts");
   }
 
@@ -99,6 +102,8 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
       </div>
     );
   }
+
+  const isTimeAndMaterial = contract.category === "time_and_material";
 
   return (
     <div className="contracts-page contract-detail">
@@ -142,6 +147,7 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
             <dt>Reference</dt>
             <dd>{contract.reference}</dd>
           </div>
+
           <div>
             <dt>Category</dt>
             <dd>{CATEGORY_LABELS[contract.category] ?? contract.category}</dd>
@@ -154,8 +160,14 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
             <dt>Amendment</dt>
             <dd>{contract.isAmendment ? "Yes" : "No"}</dd>
           </div>
+          {contract.isAmendment ? (
+            <div>
+              <dt>Parent Contract</dt>
+              <dd>{contract.parentContractReference ?? contract.parentContractId ?? "—"}</dd>
+            </div>
+          ) : null}
           <div>
-            <dt>Client file</dt>
+            <dt>Contract Document</dt>
             <dd>
               {contract.clientFileName || contract.clientFileKey ? (
                 <span data-testid="client-file-link">
@@ -173,19 +185,19 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
         <h3>Closure & period</h3>
         <dl className="contract-detail-grid">
           <div>
-            <dt>Closure owner</dt>
+            <dt>Closure Owner</dt>
             <dd>{contract.closureOwnerName ?? "—"}</dd>
           </div>
           <div>
-            <dt>Period</dt>
-            <dd>
-              {contract.startDate && contract.endDate
-                ? `${contract.startDate} – ${contract.endDate}`
-                : "—"}
-            </dd>
+            <dt>Contract Period Start Date</dt>
+            <dd>{contract.startDate ?? "—"}</dd>
           </div>
           <div>
-            <dt>Project status</dt>
+            <dt>Contract Period End Date</dt>
+            <dd>{contract.endDate ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Project Status</dt>
             <dd>
               {contract.projectStatus
                 ? (STATUS_LABELS[contract.projectStatus] ?? contract.projectStatus)
@@ -193,7 +205,7 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
             </dd>
           </div>
           <div>
-            <dt>PMO note</dt>
+            <dt>PMO Note</dt>
             <dd>{contract.pmoNote || "—"}</dd>
           </div>
         </dl>
@@ -203,7 +215,7 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
         <h3>Payment & milestones</h3>
         <dl className="contract-detail-grid">
           <div>
-            <dt>Payment type</dt>
+            <dt>Payment Type</dt>
             <dd>
               {contract.paymentType === "monthly"
                 ? "Monthly × Months"
@@ -212,44 +224,63 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
                   : "—"}
             </dd>
           </div>
-          <div>
-            <dt>Payment</dt>
-            <dd>
-              {canViewFinancials
-                ? contract.paymentDisplay ??
-                  (contract.projectValue
+          {contract.paymentType === "project_value" ? (
+            <div>
+              <dt>Total project value</dt>
+              <dd>
+                {canViewFinancials
+                  ? contract.projectValue
                     ? `${contract.currency} ${contract.projectValue}`
-                    : contract.monthlyRate
-                      ? `${contract.currency} ${contract.monthlyRate} × ${contract.months ?? "—"}`
-                      : "—")
-                : contract.paymentDisplay || "Restricted"}
-            </dd>
-          </div>
+                    : "—"
+                  : contract.paymentDisplay || "Restricted"}
+              </dd>
+            </div>
+          ) : null}
+          {contract.paymentType === "monthly" ? (
+            <>
+              <div>
+                <dt>Monthly Payment Amount</dt>
+                <dd>
+                  {canViewFinancials
+                    ? contract.monthlyRate
+                      ? `${contract.currency} ${contract.monthlyRate}`
+                      : "—"
+                    : "Restricted"}
+                </dd>
+              </div>
+              <div>
+                <dt>Months</dt>
+                <dd>{contract.months ?? "—"}</dd>
+              </div>
+            </>
+          ) : null}
         </dl>
-        {contract.milestones && contract.milestones.length > 0 ? (
-          <div className="contracts-table-wrap">
-            <table className="contracts-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  {canViewFinancials ? <th>Value</th> : null}
-                  <th>Due condition</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contract.milestones.map((row) => (
-                  <tr key={`${row.name}-${row.sortOrder}`}>
-                    <td>{row.name}</td>
-                    {canViewFinancials ? <td>{row.value}</td> : null}
-                    <td>{row.dueConditionOrDate}</td>
+        {isTimeAndMaterial ? (
+          contract.milestones && contract.milestones.length > 0 ? (
+            <div className="contracts-table-wrap">
+              <table className="contracts-table" data-testid="milestones-table">
+                <thead>
+                  <tr>
+                    <th>Milestone</th>
+                    {canViewFinancials ? <th>Value</th> : null}
+                    <th>Due Conditions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="contract-hint">No milestones.</p>
-        )}
+                </thead>
+                <tbody>
+                  {contract.milestones.map((row) => (
+                    <tr key={`${row.name}-${row.sortOrder}`}>
+                      <td>{row.name}</td>
+                      {canViewFinancials ? <td>{row.value}</td> : null}
+                      <td>{row.dueConditionOrDate}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="contract-hint">No milestones.</p>
+          )
+        ) : null}
       </section>
     </div>
   );
