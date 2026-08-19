@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,7 +18,8 @@ from app.core.errors import (
     last_admin_required,
     not_found,
 )
-from app.core.invites import attach_invite_roles, find_active_invite, find_user_by_email, load_active_invites
+from app.core.invites import attach_invite_roles, find_active_invite, find_user_by_email
+from app.core.pagination import list_query_deps
 from app.core.permissions import load_assigned_roles, would_remove_last_admin, would_remove_person_leave_last_admin
 from app.core.security import revoke_refresh_tokens_for_user
 from app.db.session import get_db
@@ -79,14 +80,33 @@ def _invite_payload(db: Session, invite: Invite) -> dict:
 
 @router.get("/people")
 def list_people(
+    list_params: tuple[str | None, int, int] = Depends(list_query_deps),
     _current: CurrentUser = Depends(require_manage_users),
     db: Session = Depends(get_db),
 ) -> dict:
-    users = db.scalars(select(User).order_by(User.display_name, User.upn)).all()
-    invites = load_active_invites(db)
+    search, page, page_size = list_params
+    users_query = select(User).order_by(User.display_name, User.upn)
+    invites_query = (
+        select(Invite)
+        .where(Invite.consumed_at.is_(None), Invite.cancelled_at.is_(None))
+        .order_by(Invite.email)
+    )
+    if search:
+        term = f"%{search}%"
+        users_query = users_query.where(or_(User.display_name.ilike(term), User.upn.ilike(term)))
+        invites_query = invites_query.where(Invite.email.ilike(term))
+
+    people: list[dict] = [_person_payload(db, user) for user in db.scalars(users_query).all()]
+    people.extend(_invite_payload(db, invite) for invite in db.scalars(invites_query).all())
+    people.sort(key=lambda item: (item.get("displayName") or item["email"]).lower())
+    total = len(people)
+    offset = (page - 1) * page_size
+    page_items = people[offset : offset + page_size]
     return {
-        "people": [_person_payload(db, user) for user in users]
-        + [_invite_payload(db, invite) for invite in invites]
+        "people": page_items,
+        "page": page,
+        "pageSize": page_size,
+        "total": total,
     }
 
 

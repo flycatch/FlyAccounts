@@ -5,6 +5,7 @@ import type { components } from "../../../api/schema";
 import { apiClient } from "../../../api/client";
 import { PillToggle } from "../../../components/PillToggle";
 import { SelectField } from "../../../components/SelectField";
+import { TextareaField } from "../../../components/TextareaField";
 import { TextField } from "../../../components/TextField";
 import { useEntityContext } from "../../../entity/EntityContext";
 import { ContractCreateLayout } from "./ContractCreateLayout";
@@ -167,7 +168,7 @@ export function Step2ClosurePage({ me }: Step2ClosurePageProps) {
     >
       <div className="contract-create-fields">
         <SelectField
-          label="Closure owner"
+          label="Closure Owner"
           value={closureOwnerUserId}
           error={fieldErrors.owner}
           onChange={(event) => {
@@ -189,7 +190,7 @@ export function Step2ClosurePage({ me }: Step2ClosurePageProps) {
           )}
         </SelectField>
         <TextField
-          label="Start date"
+          label="Contract Period Start Date"
           type="date"
           value={startDate}
           error={fieldErrors.startDate}
@@ -204,7 +205,7 @@ export function Step2ClosurePage({ me }: Step2ClosurePageProps) {
           }}
         />
         <TextField
-          label="End date"
+          label="Contract Period End Date"
           type="date"
           value={endDate}
           error={fieldErrors.endDate}
@@ -224,20 +225,17 @@ export function Step2ClosurePage({ me }: Step2ClosurePageProps) {
           }}
         />
         <PillToggle
-          label="Project status"
+          label="Project Status"
           value={projectStatus}
           options={STATUSES}
           onChange={setProjectStatus}
         />
-        <label className="ui-field">
-          PMO note
-          <textarea
-            className="ui-control"
-            value={pmoNote}
-            onChange={(event) => setPmoNote(event.target.value)}
-            rows={3}
-          />
-        </label>
+        <TextareaField
+          label="PMO Note"
+          value={pmoNote}
+          onChange={(event) => setPmoNote(event.target.value)}
+          rows={3}
+        />
       </div>
     </ContractCreateLayout>
   );

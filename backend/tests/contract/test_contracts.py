@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Contract, ContractResource, LegalEntity, User
-from tests.conftest import assign_role, auth_header, create_user, role_by_name
+from tests.conftest import assign_role, auth_header, create_client, create_user, role_by_name
 
 
 def _entity(db: Session, code: str) -> LegalEntity:
@@ -24,6 +24,7 @@ def _create_complete_contract(
     status: str = "active",
     project_value: str = "1000.00",
 ) -> Contract:
+    party = create_client(db, name=f"Client {reference}")
     contract = Contract(
         entity_id=entity.id,
         reference=reference,
@@ -38,6 +39,7 @@ def _create_complete_contract(
         payment_type="project_value",
         project_value=project_value,
         resource_type="inhouse",
+        client_id=party.id,
         client_file_key="contracts/demo.pdf",
         created_by_user_id=owner.id,
         created_at=datetime.now(timezone.utc),
@@ -92,9 +94,11 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
     admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
     assign_role(db, admin, role_by_name(db, "System Admin"))
     entity_a = _entity(db, "entity_a")
+    party = create_client(db)
     db.commit()
 
     payload = {
+        "clientId": str(party.id),
         "clientFileKey": "contracts/file.pdf",
         "clientFileName": "file.pdf",
         "clientFileContentType": "application/pdf",
@@ -112,6 +116,8 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
     body = created.json()
     assert body["isDraft"] is True
     assert body["reference"] == "CTR-0001"
+    assert body["clientId"] == str(party.id)
+    assert body["clientName"] == party.name
     assert "closureOwnerUserId" not in body or body.get("startDate") is None
 
     listed = client.get(
@@ -119,6 +125,7 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
         headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
     )
     assert listed.status_code == 200
+    assert listed.json()["total"] >= 1
     rows = [item for item in listed.json()["contracts"] if item["reference"] == "CTR-0001"]
     assert len(rows) == 1
 
@@ -127,9 +134,11 @@ def test_create_rejects_all_entities_and_invalid_currency(client, db: Session):
     admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
     assign_role(db, admin, role_by_name(db, "System Admin"))
     entity_a = _entity(db, "entity_a")
+    party = create_client(db)
     db.commit()
 
     payload = {
+        "clientId": str(party.id),
         "clientFileKey": "contracts/file.pdf",
         "isAmendment": False,
         "category": "time_and_material",
@@ -158,12 +167,14 @@ def test_patch_completes_after_step3_without_resource(client, db: Session):
     admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
     assign_role(db, admin, role_by_name(db, "System Admin"))
     entity_c = _entity(db, "entity_c")
+    party = create_client(db, name="Entity C Client")
     db.commit()
 
     created = client.post(
         "/v1/contracts",
         headers={**auth_header(admin), "X-Entity-Id": str(entity_c.id)},
         json={
+            "clientId": str(party.id),
             "clientFileKey": "contracts/file.pdf",
             "isAmendment": False,
             "category": "data_management",
@@ -306,3 +317,24 @@ def test_upload_contract_file_mocked(client, db: Session, monkeypatch):
     assert body["fileKey"].endswith("demo.pdf")
     assert body["fileName"] == "demo.pdf"
     assert body["sizeBytes"] == 8
+
+
+def test_upload_contract_doc_file_accepted(client, db: Session, monkeypatch):
+    admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
+    assign_role(db, admin, role_by_name(db, "System Admin"))
+    entity_a = _entity(db, "entity_a")
+    db.commit()
+
+    monkeypatch.setattr(
+        "app.api.contracts.upload_bytes",
+        lambda **kwargs: f"contracts/{uuid.uuid4()}/legacy.doc",
+    )
+
+    response = client.post(
+        "/v1/contracts/files",
+        headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
+        files={"file": ("legacy.doc", BytesIO(b"DOC"), "application/msword")},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["fileName"] == "legacy.doc"

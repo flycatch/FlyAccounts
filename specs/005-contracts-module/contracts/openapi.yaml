@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: FlyAccounts
-  description: 'FlyAccounts API 5.2.0: 3-step contract drafts complete without resource; soft DELETE /contracts/{contractId};
-    GET /contracts/closure-owners; deleted contracts excluded from list/get.'
-  version: 5.2.0
+  description: 'FlyAccounts API 6.0.0: global Clients CRUD; server-side search/pagination on clients,
+    contracts, people, roles; contracts require clientId on create.'
+  version: 6.0.0
 servers:
 - url: /v1
   description: Versioned API prefix
@@ -14,6 +14,7 @@ tags:
 - name: Settings
 - name: Entities
 - name: Contracts
+- name: Clients
 paths:
   /auth/microsoft:
     post:
@@ -264,6 +265,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - &id001
+        $ref: '#/components/parameters/ListSearch'
+      - &id002
+        $ref: '#/components/parameters/ListPage'
+      - &id003
+        $ref: '#/components/parameters/ListPageSize'
   /roles:
     get:
       operationId: listRoles
@@ -295,6 +303,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - *id001
+      - *id002
+      - *id003
     post:
       operationId: createRole
       summary: Create a role
@@ -926,7 +938,7 @@ paths:
       summary: List legal entities for the Entity Switcher
       tags:
       - Entities
-      security: &id001
+      security: &id005
       - bearerAuth: []
       responses:
         '200':
@@ -947,17 +959,150 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /clients:
+    get:
+      operationId: listClients
+      summary: List clients with search and pagination
+      description: Requires manage_contracts. Global client master (not entity-scoped).
+      tags:
+      - Clients
+      security:
+      - bearerAuth: []
+      parameters:
+      - *id001
+      - *id002
+      - *id003
+      responses:
+        '200':
+          description: Paginated clients.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientsResponse'
+        '401': &id004
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403': *id004
+    post:
+      operationId: createClient
+      summary: Create a client
+      description: Requires manage_contracts. Name must be unique (case-insensitive).
+      tags:
+      - Clients
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+      responses:
+        '201':
+          description: Client created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400': *id004
+        '401': *id004
+        '403': *id004
+        '409':
+          description: Duplicate client name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: duplicate_client_name
+            message: A client with that name already exists.
+  /clients/{clientId}:
+    get:
+      operationId: getClient
+      summary: Get a client
+      tags:
+      - Clients
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ClientId'
+      responses:
+        '200':
+          description: Client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '401': *id004
+        '403': *id004
+        '404': *id004
+    patch:
+      operationId: updateClient
+      summary: Update a client
+      tags:
+      - Clients
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ClientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+      responses:
+        '200':
+          description: Updated client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400': *id004
+        '401': *id004
+        '403': *id004
+        '404': *id004
+        '409': *id004
+    delete:
+      operationId: deleteClient
+      summary: Delete a client
+      description: Refused with client_in_use when non-deleted contracts reference the client.
+      tags:
+      - Clients
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ClientId'
+      responses:
+        '204':
+          description: Deleted.
+        '401': *id004
+        '403': *id004
+        '404': *id004
+        '409':
+          description: Client is referenced by contracts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: client_in_use
+            message: This client is linked to 2 contracts.
   /contracts:
     get:
       operationId: listContracts
       summary: List contracts scoped by X-Entity-Id
       description: Requires manage_contracts. Financial amount fields are omitted when the caller lacks
-        view_contract_financials.
+        view_contract_financials. Supports search (reference, closure owner, client name), status, and
+        server-side pagination.
       tags:
       - Contracts
-      security: *id001
+      security: *id005
       parameters:
-      - &id002
+      - &id006
         $ref: '#/components/parameters/EntityIdHeader'
       - name: status
         in: query
@@ -971,12 +1116,9 @@ paths:
           - support
           - cancelled
           default: all
-      - name: q
-        in: query
-        required: false
-        description: Search by contract reference or closure owner name
-        schema:
-          type: string
+      - *id001
+      - *id002
+      - *id003
       responses:
         '200':
           description: Contracts in entity context.
@@ -1003,9 +1145,9 @@ paths:
         reference. Later steps use PATCH.
       tags:
       - Contracts
-      security: *id001
-      parameters: &id003
-      - *id002
+      security: *id005
+      parameters: &id007
+      - *id006
       requestBody:
         required: true
         content:
@@ -1040,11 +1182,11 @@ paths:
   /contracts/files:
     post:
       operationId: uploadContractFile
-      summary: Upload a client contract file (.pdf or .docx)
+      summary: Upload a client contract file (.pdf, .doc, or .docx)
       tags:
       - Contracts
-      security: *id001
-      parameters: *id003
+      security: *id005
+      parameters: *id007
       requestBody:
         required: true
         content:
@@ -1089,17 +1231,17 @@ paths:
       summary: Get a contract by id
       tags:
       - Contracts
-      security: &id004
+      security: &id008
       - bearerAuth: []
       parameters:
-      - &id005
+      - &id009
         name: contractId
         in: path
         required: true
         schema:
           type: string
           format: uuid
-      - &id006
+      - &id010
         $ref: '#/components/parameters/EntityIdHeader'
       responses:
         '200':
@@ -1131,10 +1273,10 @@ paths:
       summary: Update/complete a draft contract (steps 2–4)
       tags:
       - Contracts
-      security: *id004
+      security: *id008
       parameters:
-      - *id005
-      - *id006
+      - *id009
+      - *id010
       requestBody:
         required: true
         content:
@@ -1178,7 +1320,7 @@ paths:
       description: Requires manage_contracts and view_contract_financials.
       tags:
       - Contracts
-      security: &id007
+      security: &id011
       - bearerAuth: []
       parameters:
       - name: contractId
@@ -1215,7 +1357,7 @@ paths:
       summary: List users eligible as closure owners
       tags:
       - Contracts
-      security: *id007
+      security: *id011
       responses:
         '200':
           description: Owners
@@ -1279,6 +1421,41 @@ components:
         Create requires a concrete UUID.
       schema:
         type: string
+    ListSearch:
+      name: search
+      in: query
+      required: false
+      description: Case-insensitive search across relevant text fields.
+      schema:
+        type: string
+    ListPage:
+      name: page
+      in: query
+      required: false
+      description: 1-based page index.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    ListPageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: Page size.
+      schema:
+        type: integer
+        enum:
+        - 10
+        - 25
+        - 50
+        default: 10
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     ErrorResponse:
       type: object
@@ -1308,6 +1485,8 @@ components:
           - entity_context_required
           - invalid_currency
           - invalid_file_type
+          - client_in_use
+          - duplicate_client_name
         message:
           type: string
     MicrosoftTokenRequest:
@@ -1528,21 +1707,51 @@ components:
       additionalProperties: false
       required:
       - people
+      - page
+      - pageSize
+      - total
       properties:
         people:
           type: array
           items:
             $ref: '#/components/schemas/Person'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          enum:
+          - 10
+          - 25
+          - 50
+        total:
+          type: integer
+          minimum: 0
     RolesResponse:
       type: object
       additionalProperties: false
       required:
       - roles
+      - page
+      - pageSize
+      - total
       properties:
         roles:
           type: array
           items:
             $ref: '#/components/schemas/Role'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          enum:
+          - 10
+          - 25
+          - 50
+        total:
+          type: integer
+          minimum: 0
     PermissionModuleGroup:
       type: object
       additionalProperties: false
@@ -1786,6 +1995,8 @@ components:
         parentContractId:
           type: string
           format: uuid
+        parentContractReference:
+          type: string
         closureOwnerUserId:
           type: string
           format: uuid
@@ -1846,16 +2057,36 @@ components:
             $ref: '#/components/schemas/ContractMilestone'
         resource:
           $ref: '#/components/schemas/ContractResource'
+        clientId:
+          type: string
+          format: uuid
+        clientName:
+          type: string
     ContractsResponse:
       type: object
       additionalProperties: false
       required:
       - contracts
+      - page
+      - pageSize
+      - total
       properties:
         contracts:
           type: array
           items:
             $ref: '#/components/schemas/ContractSummary'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          enum:
+          - 10
+          - 25
+          - 50
+        total:
+          type: integer
+          minimum: 0
     CreateContractRequest:
       type: object
       additionalProperties: false
@@ -1864,6 +2095,7 @@ components:
       - isAmendment
       - category
       - currency
+      - clientId
       properties:
         clientFileKey:
           type: string
@@ -1891,6 +2123,9 @@ components:
         clientFileSizeBytes:
           type: integer
           minimum: 0
+        clientId:
+          type: string
+          format: uuid
     ContractFileUploadResponse:
       type: object
       additionalProperties: false
@@ -1957,6 +2192,9 @@ components:
         complete:
           type: boolean
           description: When true after Step 3 fields are valid, sets isDraft false.
+        clientId:
+          type: string
+          format: uuid
     ContractDetail:
       type: object
       additionalProperties: false
@@ -1998,6 +2236,8 @@ components:
         parentContractId:
           type: string
           format: uuid
+        parentContractReference:
+          type: string
         closureOwnerUserId:
           type: string
           format: uuid
@@ -2058,6 +2298,11 @@ components:
             $ref: '#/components/schemas/ContractMilestone'
         resource:
           $ref: '#/components/schemas/ContractResource'
+        clientId:
+          type: string
+          format: uuid
+        clientName:
+          type: string
     ClosureOwner:
       type: object
       additionalProperties: false
@@ -2080,3 +2325,117 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ClosureOwner'
+    Client:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - address
+      - contactPerson
+      - contactEmail
+      - contactPhone
+      - vatNumber
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        contactPerson:
+          type: string
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+        vatNumber:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ClientsResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - clients
+      - page
+      - pageSize
+      - total
+      properties:
+        clients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Client'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          enum:
+          - 10
+          - 25
+          - 50
+        total:
+          type: integer
+          minimum: 0
+    CreateClientRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - address
+      - contactPerson
+      - contactEmail
+      - contactPhone
+      - vatNumber
+      properties:
+        name:
+          type: string
+          minLength: 1
+        address:
+          type: string
+          minLength: 1
+        contactPerson:
+          type: string
+          minLength: 1
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+          minLength: 1
+        vatNumber:
+          type: string
+          minLength: 1
+        notes:
+          type: string
+    UpdateClientRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        address:
+          type: string
+          minLength: 1
+        contactPerson:
+          type: string
+          minLength: 1
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+          minLength: 1
+        vatNumber:
+          type: string
+          minLength: 1
+        notes:
+          type: string

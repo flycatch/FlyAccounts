@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
 const get = vi.fn();
@@ -16,6 +17,17 @@ vi.mock("../src/api/client", () => ({
 }));
 
 import { UsersPage } from "../src/pages/settings/UsersPage";
+import { ToastProvider } from "../src/toast/ToastProvider";
+
+function renderUsers() {
+  return render(
+    <MemoryRouter>
+      <ToastProvider>
+        <UsersPage />
+      </ToastProvider>
+    </MemoryRouter>,
+  );
+}
 
 const people = [
   {
@@ -73,14 +85,14 @@ describe("UsersPage", () => {
     del.mockReset();
     get.mockImplementation((path: string) => {
       if (path === "/people") {
-        return Promise.resolve({ data: { people }, error: undefined, response: { ok: true } });
+        return Promise.resolve({ data: { people, page: 1, pageSize: 10, total: people.length }, error: undefined, response: { ok: true } });
       }
-      return Promise.resolve({ data: { roles }, error: undefined, response: { ok: true } });
+      return Promise.resolve({ data: { roles, page: 1, pageSize: 50, total: roles.length }, error: undefined, response: { ok: true } });
     });
   });
 
   it("shows people as full-width cards and opens detail only after selection", async () => {
-    render(<UsersPage />);
+    renderUsers();
     expect(await screen.findByText("Alex Example")).toBeInTheDocument();
     expect(screen.queryByText("Waiting for a role.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /remove person/i })).not.toBeInTheDocument();
@@ -91,7 +103,7 @@ describe("UsersPage", () => {
   });
 
   it("keeps invite email focused while typing in the modal", async () => {
-    render(<UsersPage />);
+    renderUsers();
     await screen.findByText("Alex Example");
     await openInviteModal();
     const email = screen.getByLabelText(/work email/i);
@@ -102,7 +114,7 @@ describe("UsersPage", () => {
   });
 
   it("shows an organization-entered person as pending and waiting for a role", async () => {
-    render(<UsersPage />);
+    renderUsers();
     expect(await screen.findByText("Sam Pending")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
     selectPerson(/sam pending/i);
@@ -122,12 +134,12 @@ describe("UsersPage", () => {
       response: { ok: true },
     });
 
-    render(<UsersPage />);
+    renderUsers();
     expect(await screen.findByText("Alex Example")).toBeInTheDocument();
     selectPerson(/alex example/i);
     fireEvent.click(screen.getByLabelText(/^member$/i));
     fireEvent.click(screen.getByRole("button", { name: /^assign selected roles$/i }));
-    expect(await screen.findByText("Role assigned.")).toBeInTheDocument();
+    expect(await screen.findByText("Role assigned.")).toBeInTheDocument(); // toast
     expect(post).toHaveBeenCalledWith(
       "/people/{userId}/roles",
       expect.objectContaining({
@@ -140,9 +152,9 @@ describe("UsersPage", () => {
     const invited: typeof people = [];
     get.mockImplementation((path: string) => {
       if (path === "/people") {
-        return Promise.resolve({ data: { people: [...people, ...invited] }, error: undefined, response: { ok: true } });
+        return Promise.resolve({ data: { people: [...people, ...invited], page: 1, pageSize: 10, total: people.length + invited.length }, error: undefined, response: { ok: true } });
       }
-      return Promise.resolve({ data: { roles }, error: undefined, response: { ok: true } });
+      return Promise.resolve({ data: { roles, page: 1, pageSize: 50, total: roles.length }, error: undefined, response: { ok: true } });
     });
     post.mockImplementation((path: string, init?: { body?: { email?: string; roleIds?: string[] } }) => {
       if (path === "/people/invites") {
@@ -161,7 +173,7 @@ describe("UsersPage", () => {
       return Promise.resolve({ data: undefined, error: undefined, response: { ok: false } });
     });
 
-    render(<UsersPage />);
+    renderUsers();
     await screen.findByText("Alex Example");
     await openInviteModal();
     fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: "two@contoso.com" } });
@@ -203,12 +215,12 @@ describe("UsersPage", () => {
       error: undefined,
       response: { ok: true },
     });
-    render(<UsersPage />);
+    renderUsers();
     await screen.findByText("Alex Example");
     selectPerson(/invited@contoso\.com/i);
     fireEvent.click(screen.getByLabelText(/^member$/i));
     fireEvent.click(screen.getByRole("button", { name: /^assign selected roles$/i }));
-    expect(await screen.findByText("Role assigned.")).toBeInTheDocument();
+    expect(await screen.findByText("Role assigned.")).toBeInTheDocument(); // toast
     expect(post).toHaveBeenCalledWith(
       "/people/invites/{inviteId}/roles",
       expect.objectContaining({ params: { path: { inviteId: "invite-1" } } }),
@@ -226,7 +238,7 @@ describe("UsersPage", () => {
 
   it("cancels invites and refuses last-admin remove", async () => {
     del.mockResolvedValueOnce({ data: undefined, error: undefined, response: { ok: true, status: 204 } });
-    render(<UsersPage />);
+    renderUsers();
     expect((await screen.findAllByText("invited@contoso.com")).length).toBeGreaterThan(0);
     selectPerson(/invited@contoso\.com/i);
     fireEvent.click(screen.getByRole("button", { name: /cancel invite/i }));

@@ -4,7 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -16,6 +16,7 @@ from app.core.errors import (
     not_found,
     role_still_assigned,
 )
+from app.core.pagination import list_query_deps, paginate
 from app.core.permissions import would_delete_role_leave_last_admin, would_detach_leave_last_admin
 from app.db.session import get_db
 from app.models import Invite, InviteRole, Permission, Role, RoleAssignment, RolePermission
@@ -86,10 +87,26 @@ def load_role(db: Session, role_id: uuid.UUID) -> Role | None:
 
 @router.get("/roles")
 def list_roles(
+    list_params: tuple[str | None, int, int] = Depends(list_query_deps),
     _current: CurrentUser = Depends(require_manage_roles),
     db: Session = Depends(get_db),
 ) -> dict:
-    return {"roles": [role_payload(role) for role in load_roles_with_permissions(db)]}
+    search, page, page_size = list_params
+    query = (
+        select(Role)
+        .options(selectinload(Role.role_permissions).selectinload(RolePermission.permission))
+        .order_by(Role.name)
+    )
+    if search:
+        term = f"%{search}%"
+        query = query.where(or_(Role.name.ilike(term), Role.description.ilike(term)))
+    roles, total = paginate(db, query, page=page, page_size=page_size)
+    return {
+        "roles": [role_payload(role) for role in roles],
+        "page": page,
+        "pageSize": page_size,
+        "total": total,
+    }
 
 
 @router.post("/roles", status_code=201)

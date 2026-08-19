@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import type { components } from "../../../api/schema";
@@ -6,16 +6,11 @@ import { apiClient } from "../../../api/client";
 import { PillToggle } from "../../../components/PillToggle";
 import { TextField } from "../../../components/TextField";
 import { useEntityContext } from "../../../entity/EntityContext";
+import { MilestonesTable, type MilestoneDraft } from "../MilestonesTable";
 import { ContractCreateLayout } from "./ContractCreateLayout";
 
 type MeResponse = components["schemas"]["MeResponse"];
 type ContractDetail = components["schemas"]["ContractDetail"];
-
-type MilestoneDraft = {
-  name: string;
-  value: string;
-  dueConditionOrDate: string;
-};
 
 type Step3PaymentPageProps = {
   me: MeResponse;
@@ -30,14 +25,14 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
   const [paymentType, setPaymentType] = useState<"project_value" | "monthly">("project_value");
   const [projectValue, setProjectValue] = useState("");
   const [monthlyRate, setMonthlyRate] = useState("");
-  const [months, setMonths] = useState("1");
-  const [milestones, setMilestones] = useState<MilestoneDraft[]>([
-    { name: "", value: "", dueConditionOrDate: "" },
-  ]);
+  const [months, setMonths] = useState("");
+  const [milestones, setMilestones] = useState<MilestoneDraft[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isTimeAndMaterial = contract?.category === "time_and_material";
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +64,7 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
       if (data.months) {
         setMonths(String(data.months));
       }
-      if (data.milestones && data.milestones.length > 0) {
+      if (data.category === "time_and_material" && data.milestones && data.milestones.length > 0) {
         setMilestones(
           data.milestones.map((item) => ({
             name: item.name,
@@ -77,6 +72,8 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
             dueConditionOrDate: item.dueConditionOrDate,
           })),
         );
+      } else {
+        setMilestones([]);
       }
       setLoading(false);
     }
@@ -86,14 +83,17 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
     };
   }, [contractId, entityHeaderValue]);
 
-  const cumulativeValues = useMemo(() => {
-    let running = 0;
-    return milestones.map((item) => {
-      const amount = Number.parseFloat(item.value || "0");
-      running += Number.isFinite(amount) ? amount : 0;
-      return running.toFixed(2);
-    });
-  }, [milestones]);
+  function handlePaymentTypeChange(next: "project_value" | "monthly") {
+    setPaymentType(next);
+    if (next === "project_value") {
+      setMonthlyRate("");
+      setMonths("");
+      setFieldErrors((prev) => ({ ...prev, monthlyRate: "", months: "" }));
+    } else {
+      setProjectValue("");
+      setFieldErrors((prev) => ({ ...prev, projectValue: "" }));
+    }
+  }
 
   function validate(showAll = false): boolean {
     const next: Record<string, string> = {};
@@ -103,14 +103,14 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
       }
       if (paymentType === "monthly") {
         if (!monthlyRate.trim()) {
-          next.monthlyRate = "Monthly rate is required.";
+          next.monthlyRate = "Monthly payment amount is required.";
         }
         if (!months.trim() || Number.parseInt(months, 10) < 1) {
-          next.months = "Number of months is required.";
+          next.months = "Months is required.";
         }
       }
     }
-    if (contract?.category === "time_and_material") {
+    if (isTimeAndMaterial) {
       const named = milestones.filter((row) => row.name.trim());
       if (named.length === 0) {
         next.milestones = "Add at least one milestone for Time & Material.";
@@ -131,14 +131,16 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
     setError(null);
     const body: components["schemas"]["UpdateContractRequest"] = {
       paymentType,
-      milestones: milestones
-        .filter((item) => item.name.trim())
-        .map((item, index) => ({
-          name: item.name.trim(),
-          value: canViewFinancials ? item.value || "0" : "0",
-          dueConditionOrDate: item.dueConditionOrDate || contract?.startDate || "",
-          sortOrder: index,
-        })),
+      milestones: isTimeAndMaterial
+        ? milestones
+            .filter((item) => item.name.trim())
+            .map((item, index) => ({
+              name: item.name.trim(),
+              value: canViewFinancials ? item.value || "0" : "0",
+              dueConditionOrDate: item.dueConditionOrDate || contract?.startDate || "",
+              sortOrder: index,
+            }))
+        : [],
       complete: true,
     };
     if (canViewFinancials) {
@@ -206,19 +208,20 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
     >
       <div className="contract-create-fields">
         <PillToggle
-          label="Payment type"
+          label="Payment Type"
           value={paymentType}
           options={[
             { value: "project_value", label: "Project Value" },
             { value: "monthly", label: "Monthly × Months" },
           ]}
-          onChange={setPaymentType}
+          onChange={handlePaymentTypeChange}
         />
 
         {canViewFinancials ? (
           paymentType === "project_value" ? (
             <TextField
               label="Total project value"
+              type="number"
               value={projectValue}
               error={fieldErrors.projectValue}
               onChange={(event) => {
@@ -237,7 +240,8 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
           ) : (
             <>
               <TextField
-                label="Monthly rate"
+                label="Monthly Payment Amount"
+                type="number"
                 value={monthlyRate}
                 error={fieldErrors.monthlyRate}
                 onChange={(event) => {
@@ -248,13 +252,13 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
                   if (!monthlyRate.trim()) {
                     setFieldErrors((prev) => ({
                       ...prev,
-                      monthlyRate: "Monthly rate is required.",
+                      monthlyRate: "Monthly payment amount is required.",
                     }));
                   }
                 }}
               />
               <TextField
-                label="Number of months"
+                label="Months"
                 type="number"
                 value={months}
                 error={fieldErrors.months}
@@ -266,7 +270,7 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
                   if (!months.trim() || Number.parseInt(months, 10) < 1) {
                     setFieldErrors((prev) => ({
                       ...prev,
-                      months: "Number of months is required.",
+                      months: "Months is required.",
                     }));
                   }
                 }}
@@ -277,105 +281,25 @@ export function Step3PaymentPage({ me }: Step3PaymentPageProps) {
           <p className="contract-hint">Payment amounts are hidden for your role.</p>
         )}
 
-        <div>
-          <div className="contract-milestones-header">
-            <h3>Milestones</h3>
-            <button
-              type="button"
-              onClick={() =>
-                setMilestones((rows) => [...rows, { name: "", value: "", dueConditionOrDate: "" }])
+        {isTimeAndMaterial ? (
+          <MilestonesTable
+            milestones={milestones}
+            canViewFinancials={canViewFinancials}
+            error={fieldErrors.milestones}
+            onChange={(rows) => {
+              setMilestones(rows);
+              setFieldErrors((prev) => ({ ...prev, milestones: "" }));
+            }}
+            onBlurValidate={() => {
+              if (!milestones.some((item) => item.name.trim())) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  milestones: "Add at least one milestone for Time & Material.",
+                }));
               }
-            >
-              + Add Milestone
-            </button>
-          </div>
-          {fieldErrors.milestones ? (
-            <span className="ui-field-error">{fieldErrors.milestones}</span>
-          ) : null}
-          <div className="contracts-table-wrap">
-            <table className="contracts-table" data-testid="milestones-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  {canViewFinancials ? <th>Value</th> : null}
-                  <th>Due condition</th>
-                  {canViewFinancials ? <th>Cumulative</th> : null}
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {milestones.map((row, index) => (
-                  <tr key={index}>
-                    <td>
-                      <input
-                        className="ui-control"
-                        value={row.name}
-                        onChange={(event) =>
-                          setMilestones((rows) =>
-                            rows.map((item, i) =>
-                              i === index ? { ...item, name: event.target.value } : item,
-                            ),
-                          )
-                        }
-                        onBlur={() => {
-                          if (
-                            contract?.category === "time_and_material" &&
-                            !milestones.some((item) => item.name.trim())
-                          ) {
-                            setFieldErrors((prev) => ({
-                              ...prev,
-                              milestones: "Add at least one milestone for Time & Material.",
-                            }));
-                          }
-                        }}
-                      />
-                    </td>
-                    {canViewFinancials ? (
-                      <td>
-                        <input
-                          className="ui-control"
-                          value={row.value}
-                          onChange={(event) =>
-                            setMilestones((rows) =>
-                              rows.map((item, i) =>
-                                i === index ? { ...item, value: event.target.value } : item,
-                              ),
-                            )
-                          }
-                        />
-                      </td>
-                    ) : null}
-                    <td>
-                      <input
-                        className="ui-control"
-                        value={row.dueConditionOrDate}
-                        onChange={(event) =>
-                          setMilestones((rows) =>
-                            rows.map((item, i) =>
-                              i === index
-                                ? { ...item, dueConditionOrDate: event.target.value }
-                                : item,
-                            ),
-                          )
-                        }
-                      />
-                    </td>
-                    {canViewFinancials ? <td>{cumulativeValues[index]}</td> : null}
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => setMilestones((rows) => rows.filter((_, i) => i !== index))}
-                        disabled={milestones.length === 1}
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            }}
+          />
+        ) : null}
       </div>
     </ContractCreateLayout>
   );

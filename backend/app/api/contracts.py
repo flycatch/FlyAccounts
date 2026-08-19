@@ -18,14 +18,15 @@ from app.core.errors import (
     not_found,
     validation_error,
 )
+from app.core.pagination import list_query_deps, paginate
 from app.core.permissions import VIEW_CONTRACT_FINANCIALS
 from app.db.session import get_db
-from app.models import Contract, ContractMilestone, ContractResource, LegalEntity, User
+from app.models import Client, Contract, ContractMilestone, ContractResource, LegalEntity, User
 from app.storage.s3 import upload_bytes
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx"}
+ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 ALL_ENTITY_SENTINELS = {None, "", "*"}
 REF_PATTERN = re.compile(r"^CTR-(\d+)$", re.IGNORECASE)
 
@@ -57,6 +58,7 @@ class ResourceIn(BaseModel):
 
 class CreateContractRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    client_id: uuid.UUID = Field(alias="clientId")
     client_file_key: str = Field(alias="clientFileKey")
     is_amendment: bool = Field(alias="isAmendment")
     parent_contract_id: uuid.UUID | None = Field(default=None, alias="parentContractId")
@@ -69,6 +71,7 @@ class CreateContractRequest(BaseModel):
 
 class UpdateContractRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    client_id: uuid.UUID | None = Field(default=None, alias="clientId")
     closure_owner_user_id: uuid.UUID | None = Field(default=None, alias="closureOwnerUserId")
     start_date: date | None = Field(default=None, alias="startDate")
     end_date: date | None = Field(default=None, alias="endDate")
@@ -187,6 +190,8 @@ def contract_payload(contract: Contract, *, can_view_financials: bool, detail: b
     }
     if contract.parent_contract_id:
         payload["parentContractId"] = str(contract.parent_contract_id)
+        if contract.parent is not None:
+            payload["parentContractReference"] = contract.parent.reference
     if contract.closure_owner_user_id:
         payload["closureOwnerUserId"] = str(contract.closure_owner_user_id)
         payload["closureOwnerName"] = (
@@ -215,6 +220,9 @@ def contract_payload(contract: Contract, *, can_view_financials: bool, detail: b
         payload["clientFileContentType"] = contract.client_file_content_type
     if contract.client_file_size_bytes is not None:
         payload["clientFileSizeBytes"] = contract.client_file_size_bytes
+    if contract.client_id:
+        payload["clientId"] = str(contract.client_id)
+        payload["clientName"] = contract.client.name if contract.client else ""
     if can_view_financials:
         if contract.project_value is not None:
             payload["projectValue"] = contract.project_value
@@ -242,6 +250,8 @@ def load_contract(db: Session, contract_id: uuid.UUID) -> Contract | None:
         select(Contract)
         .options(
             selectinload(Contract.entity),
+            selectinload(Contract.client),
+            selectinload(Contract.parent),
             selectinload(Contract.closure_owner),
             selectinload(Contract.milestones),
             selectinload(Contract.resources),
@@ -320,31 +330,46 @@ def _apply_resource(
 @router.get("/contracts")
 def list_contracts(
     status: str = "all",
-    q: str | None = None,
+    list_params: tuple[str | None, int, int] = Depends(list_query_deps),
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
     current: CurrentUser = Depends(require_manage_contracts),
     db: Session = Depends(get_db),
 ) -> dict:
+    search, page, page_size = list_params
     entity_id = parse_entity_header(x_entity_id)
     query = select(Contract).options(
         selectinload(Contract.entity),
+        selectinload(Contract.client),
+        selectinload(Contract.parent),
         selectinload(Contract.closure_owner),
     ).where(Contract.deleted_at.is_(None))
     if entity_id is not None:
         query = query.where(Contract.entity_id == entity_id)
     if status and status != "all":
         query = query.where(Contract.project_status == status)
-    if q:
-        term = f"%{q.strip()}%"
+    if search:
+        term = f"%{search.strip()}%"
         query = (
             query.outerjoin(User, User.id == Contract.closure_owner_user_id)
-            .where(or_(Contract.reference.ilike(term), User.display_name.ilike(term)))
+            .outerjoin(Client, Client.id == Contract.client_id)
+            .where(
+                or_(
+                    Contract.reference.ilike(term),
+                    User.display_name.ilike(term),
+                    Client.name.ilike(term),
+                )
+            )
             .distinct()
         )
-    contracts = _dedupe_contracts(list(db.scalars(query.order_by(Contract.created_at.desc())).all()))
+    query = query.order_by(Contract.created_at.desc())
+    contracts, total = paginate(db, query, page=page, page_size=page_size)
+    contracts = _dedupe_contracts(contracts)
     can_view = VIEW_CONTRACT_FINANCIALS in current.permissions
     return {
-        "contracts": [contract_payload(item, can_view_financials=can_view) for item in contracts]
+        "contracts": [contract_payload(item, can_view_financials=can_view) for item in contracts],
+        "page": page,
+        "pageSize": page_size,
+        "total": total,
     }
 
 
@@ -398,6 +423,10 @@ def create_contract(
     if not body.client_file_key.strip():
         raise validation_error("Client contract file is required.")
 
+    client = db.get(Client, body.client_id)
+    if client is None:
+        raise validation_error("Client was not found.")
+
     if body.is_amendment:
         if body.parent_contract_id is None:
             raise validation_error("Amendment requires a parent contract.")
@@ -416,6 +445,7 @@ def create_contract(
         is_amendment=body.is_amendment,
         is_draft=True,
         parent_contract_id=body.parent_contract_id if body.is_amendment else None,
+        client_id=body.client_id,
         client_file_key=body.client_file_key.strip(),
         client_file_name=body.client_file_name,
         client_file_content_type=body.client_file_content_type,
@@ -447,6 +477,11 @@ def update_contract(
 
     can_view = VIEW_CONTRACT_FINANCIALS in current.permissions
 
+    if body.client_id is not None:
+        client = db.get(Client, body.client_id)
+        if client is None:
+            raise validation_error("Client was not found.")
+        contract.client_id = body.client_id
     if body.closure_owner_user_id is not None:
         owner = db.get(User, body.closure_owner_user_id)
         if owner is None:
@@ -470,6 +505,11 @@ def update_contract(
         if body.payment_type not in {"project_value", "monthly"}:
             raise validation_error("Invalid payment type.")
         contract.payment_type = body.payment_type
+        if body.payment_type == "project_value":
+            contract.monthly_rate = None
+            contract.months = None
+        else:
+            contract.project_value = None
     if body.project_value is not None:
         contract.project_value = _decimal_string(body.project_value, field="projectValue")
     if body.monthly_rate is not None:

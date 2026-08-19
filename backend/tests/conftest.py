@@ -17,6 +17,7 @@ from app.db.session import get_db
 from app.main import app
 from app.models import (
     Base,
+    Client,
     Contract,
     Invite,
     InviteRole,
@@ -166,6 +167,32 @@ def create_user(
     db.add(user)
     db.flush()
     return user
+
+
+def create_client(
+    db: Session,
+    *,
+    name: str = "Acme Corp",
+    address: str = "1 Main St",
+    contact_person: str = "Pat Contact",
+    contact_email: str = "pat@acme.example",
+    contact_phone: str = "+1-555-0100",
+    vat_number: str = "VAT-100",
+    notes: str | None = None,
+) -> Client:
+    client = Client(
+        name=name,
+        address=address,
+        contact_person=contact_person,
+        contact_email=contact_email,
+        contact_phone=contact_phone,
+        vat_number=vat_number,
+        notes=notes,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(client)
+    db.flush()
+    return client
 
 
 def assign_role(db: Session, user: User, role: Role, assigned_by: User | None = None) -> RoleAssignment:

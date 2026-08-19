@@ -6,6 +6,7 @@ import { apiClient } from "./api/client";
 import { getAccessToken, getRefreshToken, signOut } from "./auth/tokens";
 import { EntityProvider } from "./entity/EntityContext";
 import { AppShell } from "./layout/AppShell";
+import { ClientsPage } from "./pages/clients/ClientsPage";
 import { CombinedLandingPage } from "./pages/CombinedLandingPage";
 import { ContractDetailPage } from "./pages/contracts/ContractDetailPage";
 import { ContractEditPage } from "./pages/contracts/ContractEditPage";
@@ -18,6 +19,7 @@ import { SignInPage } from "./pages/SignInPage";
 import { PermissionsPage } from "./pages/settings/PermissionsPage";
 import { RolesPage } from "./pages/settings/RolesPage";
 import { UsersPage } from "./pages/settings/UsersPage";
+import { ToastProvider } from "./toast/ToastProvider";
 import "./pages/SignInPage.css";
 
 type MeResponse = components["schemas"]["MeResponse"];
@@ -48,93 +50,103 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
 
   return (
     <EntityProvider>
-      <AppShell
-        pathname={location.pathname}
-        showSettings={showSettings}
-        canUsers={canUsers}
-        canRoles={canRoles}
-        canPermissions={canPermissions}
-        canContracts={canContracts}
-        onNavigate={(path) => navigate(path)}
-        onSignOut={onSignOut}
-      >
-        <Routes>
-          <Route path="/" element={<CombinedLandingPage me={me} />} />
-          <Route
-            path="/contracts"
-            element={
-              <SettingsGate me={me} permission="manage_contracts">
-                <ContractsPage me={me} />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/contracts/new"
-            element={
-              <SettingsGate me={me} permission="manage_contracts">
-                <Step1UploadPage me={me} />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/contracts/:contractId/setup/2"
-            element={
-              <SettingsGate me={me} permission="manage_contracts">
-                <Step2ClosurePage me={me} />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/contracts/:contractId/setup/3"
-            element={
-              <SettingsGate me={me} permission="manage_contracts">
-                <Step3PaymentPage me={me} />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/contracts/:contractId/edit"
-            element={
-              <SettingsGate me={me} permission="manage_contracts">
-                <ContractEditPage me={me} />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/contracts/:contractId"
-            element={
-              <SettingsGate me={me} permission="manage_contracts">
-                <ContractDetailPage me={me} />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/settings/users"
-            element={
-              <SettingsGate me={me} permission="manage_users">
-                <UsersPage />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/settings/roles"
-            element={
-              <SettingsGate me={me} permission="manage_roles">
-                <RolesPage />
-              </SettingsGate>
-            }
-          />
-          <Route
-            path="/settings/permissions"
-            element={
-              <SettingsGate me={me} permission="manage_permissions">
-                <PermissionsPage />
-              </SettingsGate>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppShell>
+      <ToastProvider>
+        <AppShell
+          pathname={location.pathname}
+          showSettings={showSettings}
+          canUsers={canUsers}
+          canRoles={canRoles}
+          canPermissions={canPermissions}
+          canContracts={canContracts}
+          onNavigate={(path) => navigate(path)}
+          onSignOut={onSignOut}
+        >
+          <Routes>
+            <Route path="/" element={<CombinedLandingPage me={me} />} />
+            <Route
+              path="/clients"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <ClientsPage />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/contracts"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <ContractsPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/contracts/new"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <Step1UploadPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/contracts/:contractId/setup/2"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <Step2ClosurePage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/contracts/:contractId/setup/3"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <Step3PaymentPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/contracts/:contractId/edit"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <ContractEditPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/contracts/:contractId"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <ContractDetailPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/settings/users"
+              element={
+                <SettingsGate me={me} permission="manage_users">
+                  <UsersPage />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/settings/roles"
+              element={
+                <SettingsGate me={me} permission="manage_roles">
+                  <RolesPage />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/settings/permissions"
+              element={
+                <SettingsGate me={me} permission="manage_permissions">
+                  <PermissionsPage />
+                </SettingsGate>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppShell>
+      </ToastProvider>
     </EntityProvider>
   );
 }

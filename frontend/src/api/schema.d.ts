@@ -389,6 +389,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List clients with search and pagination
+         * @description Requires manage_contracts. Global client master (not entity-scoped).
+         */
+        get: operations["listClients"];
+        put?: never;
+        /**
+         * Create a client
+         * @description Requires manage_contracts. Name must be unique (case-insensitive).
+         */
+        post: operations["createClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{clientId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a client */
+        get: operations["getClient"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a client
+         * @description Refused with client_in_use when non-deleted contracts reference the client.
+         */
+        delete: operations["deleteClient"];
+        options?: never;
+        head?: never;
+        /** Update a client */
+        patch: operations["updateClient"];
+        trace?: never;
+    };
     "/contracts": {
         parameters: {
             query?: never;
@@ -398,7 +444,7 @@ export interface paths {
         };
         /**
          * List contracts scoped by X-Entity-Id
-         * @description Requires manage_contracts. Financial amount fields are omitted when the caller lacks view_contract_financials.
+         * @description Requires manage_contracts. Financial amount fields are omitted when the caller lacks view_contract_financials. Supports search (reference, closure owner, client name), status, and server-side pagination.
          */
         get: operations["listContracts"];
         put?: never;
@@ -422,7 +468,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload a client contract file (.pdf or .docx) */
+        /** Upload a client contract file (.pdf, .doc, or .docx) */
         post: operations["uploadContractFile"];
         delete?: never;
         options?: never;
@@ -475,7 +521,7 @@ export interface components {
     schemas: {
         ErrorResponse: {
             /** @enum {string} */
-            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required" | "duplicate_invite" | "already_present" | "duplicate_role_name" | "role_still_assigned" | "duplicate_permission" | "validation_error" | "entity_context_required" | "invalid_currency" | "invalid_file_type";
+            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required" | "duplicate_invite" | "already_present" | "duplicate_role_name" | "role_still_assigned" | "duplicate_permission" | "validation_error" | "entity_context_required" | "invalid_currency" | "invalid_file_type" | "client_in_use" | "duplicate_client_name";
             message: string;
         };
         MicrosoftTokenRequest: {
@@ -571,9 +617,17 @@ export interface components {
         };
         PeopleResponse: {
             people: components["schemas"]["Person"][];
+            page: number;
+            /** @enum {integer} */
+            pageSize: 10 | 25 | 50;
+            total: number;
         };
         RolesResponse: {
             roles: components["schemas"]["Role"][];
+            page: number;
+            /** @enum {integer} */
+            pageSize: 10 | 25 | 50;
+            total: number;
         };
         PermissionModuleGroup: {
             /** @description Catalog grouping key (e.g. settings). Not an authorization key. */
@@ -673,6 +727,7 @@ export interface components {
             isAmendment: boolean;
             /** Format: uuid */
             parentContractId?: string;
+            parentContractReference?: string;
             /** Format: uuid */
             closureOwnerUserId?: string;
             closureOwnerName?: string;
@@ -703,9 +758,16 @@ export interface components {
             clientFileSizeBytes?: number;
             milestones?: components["schemas"]["ContractMilestone"][];
             resource?: components["schemas"]["ContractResource"];
+            /** Format: uuid */
+            clientId?: string;
+            clientName?: string;
         };
         ContractsResponse: {
             contracts: components["schemas"]["ContractSummary"][];
+            page: number;
+            /** @enum {integer} */
+            pageSize: 10 | 25 | 50;
+            total: number;
         };
         CreateContractRequest: {
             clientFileKey: string;
@@ -719,6 +781,8 @@ export interface components {
             clientFileName?: string;
             clientFileContentType?: string;
             clientFileSizeBytes?: number;
+            /** Format: uuid */
+            clientId: string;
         };
         ContractFileUploadResponse: {
             fileKey: string;
@@ -745,8 +809,10 @@ export interface components {
             /** @enum {string} */
             resourceType?: "inhouse" | "vendor";
             resource?: components["schemas"]["ContractResource"];
-            /** @description When true after Step 4 fields are valid, sets isDraft false. */
+            /** @description When true after Step 3 fields are valid, sets isDraft false. */
             complete?: boolean;
+            /** Format: uuid */
+            clientId?: string;
         };
         ContractDetail: {
             /** Format: uuid */
@@ -762,6 +828,7 @@ export interface components {
             isAmendment: boolean;
             /** Format: uuid */
             parentContractId?: string;
+            parentContractReference?: string;
             /** Format: uuid */
             closureOwnerUserId?: string;
             closureOwnerName?: string;
@@ -792,6 +859,9 @@ export interface components {
             clientFileSizeBytes?: number;
             milestones?: components["schemas"]["ContractMilestone"][];
             resource?: components["schemas"]["ContractResource"];
+            /** Format: uuid */
+            clientId?: string;
+            clientName?: string;
         };
         ClosureOwner: {
             /** Format: uuid */
@@ -800,6 +870,47 @@ export interface components {
         };
         ClosureOwnersResponse: {
             owners: components["schemas"]["ClosureOwner"][];
+        };
+        Client: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            address: string;
+            contactPerson: string;
+            /** Format: email */
+            contactEmail: string;
+            contactPhone: string;
+            vatNumber: string;
+            notes?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ClientsResponse: {
+            clients: components["schemas"]["Client"][];
+            page: number;
+            /** @enum {integer} */
+            pageSize: 10 | 25 | 50;
+            total: number;
+        };
+        CreateClientRequest: {
+            name: string;
+            address: string;
+            contactPerson: string;
+            /** Format: email */
+            contactEmail: string;
+            contactPhone: string;
+            vatNumber: string;
+            notes?: string;
+        };
+        UpdateClientRequest: {
+            name?: string;
+            address?: string;
+            contactPerson?: string;
+            /** Format: email */
+            contactEmail?: string;
+            contactPhone?: string;
+            vatNumber?: string;
+            notes?: string;
         };
     };
     responses: never;
@@ -810,6 +921,13 @@ export interface components {
         PermissionId: string;
         /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
         EntityIdHeader: string;
+        /** @description Case-insensitive search across relevant text fields. */
+        ListSearch: string;
+        /** @description 1-based page index. */
+        ListPage: number;
+        /** @description Page size. */
+        ListPageSize: 10 | 25 | 50;
+        ClientId: string;
     };
     requestBodies: never;
     headers: never;
@@ -995,7 +1113,14 @@ export interface operations {
     };
     listPeople: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Case-insensitive search across relevant text fields. */
+                search?: components["parameters"]["ListSearch"];
+                /** @description 1-based page index. */
+                page?: components["parameters"]["ListPage"];
+                /** @description Page size. */
+                pageSize?: components["parameters"]["ListPageSize"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1033,7 +1158,14 @@ export interface operations {
     };
     listRoles: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Case-insensitive search across relevant text fields. */
+                search?: components["parameters"]["ListSearch"];
+                /** @description 1-based page index. */
+                page?: components["parameters"]["ListPage"];
+                /** @description Page size. */
+                pageSize?: components["parameters"]["ListPageSize"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1879,12 +2011,309 @@ export interface operations {
             };
         };
     };
+    listClients: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive search across relevant text fields. */
+                search?: components["parameters"]["ListSearch"];
+                /** @description 1-based page index. */
+                page?: components["parameters"]["ListPage"];
+                /** @description Page size. */
+                pageSize?: components["parameters"]["ListPageSize"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated clients. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientsResponse"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Client created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Client"];
+                };
+            };
+            /** @description Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description Duplicate client name.
+             * @example {
+             *       "code": "duplicate_client_name",
+             *       "message": "A client with that name already exists."
+             *     }
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: components["parameters"]["ClientId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Client"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: components["parameters"]["ClientId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description Client is referenced by contracts.
+             * @example {
+             *       "code": "client_in_use",
+             *       "message": "This client is linked to 2 contracts."
+             *     }
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: components["parameters"]["ClientId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateClientRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated client. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Client"];
+                };
+            };
+            /** @description Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listContracts: {
         parameters: {
             query?: {
                 status?: "all" | "active" | "on_hold" | "support" | "cancelled";
-                /** @description Search by contract reference or closure owner name */
-                q?: string;
+                /** @description Case-insensitive search across relevant text fields. */
+                search?: components["parameters"]["ListSearch"];
+                /** @description 1-based page index. */
+                page?: components["parameters"]["ListPage"];
+                /** @description Page size. */
+                pageSize?: components["parameters"]["ListPageSize"];
             };
             header?: {
                 /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */

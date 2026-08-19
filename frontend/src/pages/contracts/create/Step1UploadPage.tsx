@@ -1,22 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import type { components } from "../../../api/schema";
 import { apiClient } from "../../../api/client";
 import { getAccessToken } from "../../../auth/tokens";
 import { PillToggle } from "../../../components/PillToggle";
+import { SearchableSelect } from "../../../components/SearchableSelect";
 import { SelectField } from "../../../components/SelectField";
 import { useEntityContext } from "../../../entity/EntityContext";
 import { ContractCreateLayout } from "./ContractCreateLayout";
 
 type MeResponse = components["schemas"]["MeResponse"];
 type ContractSummary = components["schemas"]["ContractSummary"];
+type Client = components["schemas"]["Client"];
 
 const CATEGORIES = [
   { value: "time_and_material", label: "Time & Material" },
   { value: "data_management", label: "Data Management" },
   { value: "contract_staffing", label: "Contract Staffing" },
 ] as const;
+
+const ACCEPT =
+  ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 function formatBytes(size: number): string {
   if (size < 1024) {
@@ -28,6 +33,24 @@ function formatBytes(size: number): string {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function fileKindOf(file: File): "pdf" | "doc" | "docx" | "other" {
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith(".pdf") || file.type === "application/pdf") {
+    return "pdf";
+  }
+  if (lower.endsWith(".docx")) {
+    return "docx";
+  }
+  if (lower.endsWith(".doc") || file.type === "application/msword") {
+    return "doc";
+  }
+  return "other";
+}
+
+function isAllowedFile(file: File): boolean {
+  return fileKindOf(file) !== "other";
+}
+
 type Step1UploadPageProps = {
   me: MeResponse;
 };
@@ -37,17 +60,23 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
   const { isAllEntities, selectedEntity, entityHeaderValue } = useEntityContext();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isAmendment, setIsAmendment] = useState<"yes" | "no">("no");
+  const [dragging, setDragging] = useState(false);
+  const [isAmendment, setIsAmendment] = useState(false);
   const [parentContractId, setParentContractId] = useState("");
   const [parentError, setParentError] = useState<string | undefined>();
   const [fileError, setFileError] = useState<string | undefined>();
+  const [clientId, setClientId] = useState("");
+  const [clientError, setClientError] = useState<string | undefined>();
+  const [clients, setClients] = useState<Client[]>([]);
   const [existingContracts, setExistingContracts] = useState<ContractSummary[]>([]);
+  const [parentSearch, setParentSearch] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]["value"]>("time_and_material");
   const [currency, setCurrency] = useState<string>(selectedEntity?.allowedCurrencies[0] ?? "USD");
   const [currencyError, setCurrencyError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitLock = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!file) {
@@ -68,24 +97,30 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
   }, [file]);
 
   const currencies = selectedEntity?.allowedCurrencies ?? [];
-  const fileKind = useMemo(() => {
-    if (!file) {
-      return null;
-    }
-    const lower = file.name.toLowerCase();
-    if (lower.endsWith(".pdf") || file.type === "application/pdf") {
-      return "pdf" as const;
-    }
-    if (lower.endsWith(".docx")) {
-      return "docx" as const;
-    }
-    return "other" as const;
-  }, [file]);
+  const fileKind = useMemo(() => (file ? fileKindOf(file) : null), [file]);
 
-  async function loadParents() {
+  const chooseFile = useCallback((next: File | null) => {
+    if (!next) {
+      setFile(null);
+      setFileError(undefined);
+      return;
+    }
+    if (!isAllowedFile(next)) {
+      setFileError("Upload a contract document (.pdf, .doc, or .docx).");
+      return;
+    }
+    setFile(next);
+    setFileError(undefined);
+  }, []);
+
+  async function loadParents(search = "") {
     const { data, response } = await apiClient.GET("/contracts", {
       params: {
-        query: { status: "all" },
+        query: {
+          status: "all",
+          pageSize: 50,
+          search: search.trim() || undefined,
+        },
         header: { "X-Entity-Id": entityHeaderValue },
       },
     });
@@ -94,17 +129,48 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
     }
   }
 
+  async function loadClients() {
+    const { data, response } = await apiClient.GET("/clients", {
+      params: { query: { pageSize: 50, page: 1 } },
+    });
+    if (response.ok && data) {
+      setClients(data.clients);
+    }
+  }
+
+  useEffect(() => {
+    void loadClients();
+  }, []);
+
+  useEffect(() => {
+    if (!isAmendment) {
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      void loadParents(parentSearch);
+    }, 200);
+    return () => window.clearTimeout(handle);
+  }, [isAmendment, parentSearch, entityHeaderValue]);
+
   function validate(showAll = false): boolean {
     let ok = true;
+    if (!clientId) {
+      if (showAll) {
+        setClientError("Select a client.");
+      }
+      ok = false;
+    } else {
+      setClientError(undefined);
+    }
     if (!file) {
       if (showAll) {
-        setFileError("Upload a client contract (.pdf or .docx).");
+        setFileError("Upload a contract document (.pdf, .doc, or .docx).");
       }
       ok = false;
     } else {
       setFileError(undefined);
     }
-    if (isAmendment === "yes" && !parentContractId) {
+    if (isAmendment && !parentContractId) {
       if (showAll) {
         setParentError("Select the parent contract for this amendment.");
       }
@@ -164,12 +230,13 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
 
       const created = await apiClient.POST("/contracts", {
         body: {
+          clientId,
           clientFileKey: uploadData.fileKey,
           clientFileName: uploadData.fileName,
           clientFileContentType: uploadData.contentType,
           clientFileSizeBytes: uploadData.sizeBytes,
-          isAmendment: isAmendment === "yes",
-          parentContractId: isAmendment === "yes" ? parentContractId : undefined,
+          isAmendment,
+          parentContractId: isAmendment ? parentContractId : undefined,
           category,
           currency: currency as "INR" | "USD" | "SAR",
         },
@@ -213,19 +280,80 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
       }
     >
       <div className="contract-create-fields">
-        <div className="contract-file-drop">
-          <p>Upload client contract (.pdf or .docx)</p>
+        <SelectField
+          label="Client"
+          value={clientId}
+          error={clientError}
+          onChange={(event) => {
+            setClientId(event.target.value);
+            setClientError(undefined);
+          }}
+          onBlur={() => {
+            if (!clientId) {
+              setClientError("Select a client.");
+            }
+          }}
+        >
+          <option value="">Select client</option>
+          {clients.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </SelectField>
+        {clients.length === 0 ? (
+          <p className="contract-hint">Create a client first under Clients before starting a contract.</p>
+        ) : null}
+
+        <div
+          className={`contract-file-drop${dragging ? " is-dragging" : ""}${fileError ? " is-invalid" : ""}`}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+              setDragging(false);
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            chooseFile(event.dataTransfer.files?.[0] ?? null);
+          }}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload contract document"
+        >
+          <p>
+            <strong>Contract Document</strong>
+          </p>
+          <p>Drag and drop a file here, or click to browse (.pdf, .doc, .docx)</p>
           <input
+            ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            aria-label="Upload client contract"
+            accept={ACCEPT}
+            aria-label="Contract Document"
+            hidden
             onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
-              setFileError(undefined);
+              chooseFile(event.target.files?.[0] ?? null);
+              event.target.value = "";
             }}
             onBlur={() => {
               if (!file) {
-                setFileError("Upload a client contract (.pdf or .docx).");
+                setFileError("Upload a contract document (.pdf, .doc, or .docx).");
               }
             }}
           />
@@ -241,12 +369,12 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
               </span>
             </div>
             <div className="contract-file-actions">
-              {previewUrl && (fileKind === "docx" || fileKind === "pdf") ? (
+              {previewUrl && (fileKind === "docx" || fileKind === "doc" || fileKind === "pdf") ? (
                 <a href={previewUrl} download={file.name}>
                   Download
                 </a>
               ) : null}
-              <button type="button" onClick={() => setFile(null)}>
+              <button type="button" onClick={() => chooseFile(null)}>
                 Remove
               </button>
             </div>
@@ -254,61 +382,60 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
               <iframe title="PDF preview" className="contract-file-frame" src={previewUrl} />
             ) : (
               <p className="contract-hint">
-                {fileKind === "docx"
-                  ? "DOCX preview is not available inline. Use Download to open the file."
+                {fileKind === "docx" || fileKind === "doc"
+                  ? "Word preview is not available inline. Use Download to open the file."
                   : "Preview unavailable in this environment."}
               </p>
             )}
           </div>
         ) : null}
 
-        <PillToggle
-          label="Amendment"
-          value={isAmendment}
-          options={[
-            { value: "no", label: "No" },
-            { value: "yes", label: "Yes" },
-          ]}
-          onChange={(value) => {
-            setIsAmendment(value);
-            if (value === "yes") {
-              void loadParents();
-            }
-          }}
-        />
+        <label className="ui-field contract-amendment-toggle">
+          <span>Add Amendment to Existing Contract</span>
+          <input
+            type="checkbox"
+            checked={isAmendment}
+            aria-label="Add Amendment to Existing Contract"
+            onChange={(event) => {
+              const enabled = event.target.checked;
+              setIsAmendment(enabled);
+              if (!enabled) {
+                setParentContractId("");
+                setParentError(undefined);
+                setParentSearch("");
+              } else {
+                void loadParents("");
+              }
+            }}
+          />
+        </label>
 
-        {isAmendment === "yes" ? (
-          <SelectField
-            label="Parent contract"
+        {isAmendment ? (
+          <SearchableSelect
+            label="Parent Contract"
             value={parentContractId}
             error={parentError}
-            onChange={(event) => {
-              setParentContractId(event.target.value);
+            placeholder="Search by Parent Contract Number"
+            options={existingContracts.map((item) => ({
+              value: item.id,
+              label: item.reference,
+            }))}
+            onChange={(next) => {
+              setParentContractId(next);
               setParentError(undefined);
             }}
+            onSearchChange={setParentSearch}
             onBlur={() => {
               if (!parentContractId) {
                 setParentError("Select the parent contract for this amendment.");
               }
             }}
-          >
-            <option value="">Select contract</option>
-            {existingContracts.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.reference}
-              </option>
-            ))}
-          </SelectField>
+          />
         ) : (
           <p className="contract-hint">Contract reference will be generated automatically on continue.</p>
         )}
 
-        <PillToggle
-          label="Category"
-          value={category}
-          options={CATEGORIES}
-          onChange={setCategory}
-        />
+        <PillToggle label="Category" value={category} options={CATEGORIES} onChange={setCategory} />
 
         <SelectField
           label="Currency"

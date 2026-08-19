@@ -96,6 +96,8 @@ function mockApis(me: typeof financeMe) {
           contracts: [
             {
               ...listContract,
+              clientId: "bbbbbbbb-0000-4000-8000-000000000001",
+              clientName: "Acme Corp",
               projectValue: me.permissions.includes("view_contract_financials")
                 ? "1000.00"
                 : undefined,
@@ -104,6 +106,32 @@ function mockApis(me: typeof financeMe) {
                 : "Restricted",
             },
           ],
+          page: 1,
+          pageSize: 10,
+          total: 1,
+        },
+        error: undefined,
+        response: { ok: true },
+      });
+    }
+    if (path === "/clients") {
+      return Promise.resolve({
+        data: {
+          clients: [
+            {
+              id: "bbbbbbbb-0000-4000-8000-000000000001",
+              name: "Acme Corp",
+              address: "1 Main St",
+              contactPerson: "Pat",
+              contactEmail: "pat@acme.example",
+              contactPhone: "+1-555-0100",
+              vatNumber: "VAT-1",
+              createdAt: "2026-01-01T00:00:00Z",
+            },
+          ],
+          page: 1,
+          pageSize: 50,
+          total: 1,
         },
         error: undefined,
         response: { ok: true },
@@ -182,16 +210,20 @@ describe("Contracts module UI", () => {
     expect(screen.queryByText(/step 1 of 4/i)).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /time & material/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/contract reference/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/parent contract/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /add amendment to existing contract/i }),
+    ).not.toBeChecked();
 
     const file = new File(["%PDF"], "client.pdf", { type: "application/pdf" });
-    fireEvent.change(screen.getByLabelText(/upload client contract/i), {
+    fireEvent.change(screen.getByLabelText(/^contract document$/i), {
       target: { files: [file] },
     });
 
     expect(await screen.findByTestId("file-preview")).toBeInTheDocument();
   });
 
-  it("shows blur validation on step 1 parent when amendment is yes", async () => {
+  it("shows parent contract search only when amendment is enabled", async () => {
     mockApis(financeMe);
     sessionStorage.setItem("flyaccounts.entityId", entityA.id);
     render(<App />);
@@ -200,7 +232,7 @@ describe("Contracts module UI", () => {
     fireEvent.click(await screen.findByRole("button", { name: /\+ new contract/i }));
     await screen.findByText(/upload contract & category/i);
 
-    fireEvent.click(screen.getByRole("radio", { name: /^yes$/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /add amendment to existing contract/i }));
     const parent = await screen.findByLabelText(/parent contract/i);
     fireEvent.focus(parent);
     fireEvent.blur(parent);
@@ -208,9 +240,12 @@ describe("Contracts module UI", () => {
     await waitFor(() => {
       expect(screen.getByText(/select the parent contract/i)).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /add amendment to existing contract/i }));
+    expect(screen.queryByLabelText(/parent contract/i)).not.toBeInTheDocument();
   });
 
-  it("shows milestones table on step 3", async () => {
+  it("shows milestones section on step 3 for Time & Material only", async () => {
     mockApis(financeMe);
     sessionStorage.setItem("flyaccounts.entityId", entityA.id);
     const draftId = "dddddddd-0000-4000-8000-000000000099";
@@ -255,9 +290,67 @@ describe("Contracts module UI", () => {
     render(<App />);
 
     expect(await screen.findByText(/payment terms & milestones/i)).toBeInTheDocument();
-    expect(screen.getByTestId("milestones-table")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /\+ add milestone/i })).toBeInTheDocument();
+    expect(screen.queryByTestId("milestones-table")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /create contract/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/monthly payment amount/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: /monthly × months/i }));
+    expect(screen.getByLabelText(/monthly payment amount/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^months$/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/total project value/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /\+ add milestone/i }));
+    expect(screen.getByTestId("milestones-table")).toBeInTheDocument();
+  });
+
+  it("hides milestones on step 3 for non Time & Material categories", async () => {
+    mockApis(financeMe);
+    sessionStorage.setItem("flyaccounts.entityId", entityA.id);
+    const draftId = "dddddddd-0000-4000-8000-000000000088";
+    get.mockImplementation((path: string) => {
+      if (path === "/me") {
+        return Promise.resolve({ data: financeMe, error: undefined, response: { ok: true } });
+      }
+      if (path === "/entities") {
+        return Promise.resolve({
+          data: { entities: [entityA, entityB] },
+          error: undefined,
+          response: { ok: true },
+        });
+      }
+      if (path === "/contracts/{contractId}") {
+        return Promise.resolve({
+          data: {
+            id: draftId,
+            entityId: entityA.id,
+            entityName: "Entity A",
+            reference: "CTR-0010",
+            category: "data_management",
+            currency: "INR",
+            isAmendment: false,
+            isDraft: true,
+            clientFileKey: "contracts/x.pdf",
+            createdAt: "2026-01-01T00:00:00Z",
+            closureOwnerUserId: financeMe.id,
+            startDate: "2026-01-01",
+            endDate: "2026-12-31",
+            projectStatus: "active",
+            milestones: [],
+          },
+          error: undefined,
+          response: { ok: true },
+        });
+      }
+      return Promise.resolve({ data: undefined, error: undefined, response: { ok: true } });
+    });
+
+    window.history.pushState({}, "", `/contracts/${draftId}/setup/3`);
+    render(<App />);
+
+    expect(await screen.findByText(/payment terms & milestones/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /\+ add milestone/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("milestones-table")).not.toBeInTheDocument();
   });
 
   it("navigates View and Edit from list; Delete enabled for Finance", async () => {
@@ -271,6 +364,7 @@ describe("Contracts module UI", () => {
     fireEvent.click(screen.getByRole("button", { name: /^view$/i }));
     expect(await screen.findByRole("heading", { name: "CTR-0133" })).toBeInTheDocument();
     expect(screen.getByText(/upload & category/i)).toBeInTheDocument();
+    expect(screen.getByTestId("milestones-table")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^edit$/i }));
     expect(await screen.findByRole("heading", { name: /edit ctr-0133/i })).toBeInTheDocument();
@@ -295,9 +389,12 @@ describe("Contracts module UI", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /^contracts$/i }));
     fireEvent.click(await screen.findByRole("button", { name: /\+ new contract/i }));
+    fireEvent.change(await screen.findByLabelText(/^client$/i), {
+      target: { value: "bbbbbbbb-0000-4000-8000-000000000001" },
+    });
     fireEvent.click(await screen.findByRole("button", { name: /^continue$/i }));
 
-    expect(await screen.findByText(/upload a client contract/i)).toBeInTheDocument();
+    expect(await screen.findByText(/upload a contract document/i)).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
   });
 });
