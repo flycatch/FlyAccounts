@@ -10,6 +10,8 @@ from app.models import Permission, Role, RoleAssignment, RolePermission, User
 MANAGE_USERS = "manage_users"
 MANAGE_ROLES = "manage_roles"
 MANAGE_PERMISSIONS = "manage_permissions"
+MANAGE_CONTRACTS = "manage_contracts"
+VIEW_CONTRACT_FINANCIALS = "view_contract_financials"
 
 
 def load_combined_permissions(db: Session, user_id: uuid.UUID) -> set[str]:

@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.contracts import router as contracts_router
+from app.api.entities import router as entities_router
 from app.api.me import router as me_router
 from app.api.people import router as people_router
 from app.api.permissions import router as permissions_router
@@ -24,7 +26,7 @@ def _committed_openapi() -> dict:
         Path(__file__).resolve().parents[1] / "contracts" / "openapi.yaml",
         Path(__file__).resolve().parents[2]
         / "specs"
-        / "004-settings-routes-rbac"
+        / "005-contracts-module"
         / "contracts"
         / "openapi.yaml",
     ]
@@ -45,7 +47,7 @@ async def lifespan(_application: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    application = FastAPI(title="FlyAccounts", version="4.0.0", lifespan=lifespan)
+    application = FastAPI(title="FlyAccounts", version="5.2.0", lifespan=lifespan)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -59,6 +61,8 @@ def create_app() -> FastAPI:
     application.include_router(people_router, prefix="/v1")
     application.include_router(roles_router, prefix="/v1")
     application.include_router(permissions_router, prefix="/v1")
+    application.include_router(entities_router, prefix="/v1")
+    application.include_router(contracts_router, prefix="/v1")
     application.add_exception_handler(ApiError, api_error_handler)
     setup_telemetry(application)
 

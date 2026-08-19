@@ -1,0 +1,258 @@
+.contracts-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.contracts-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.contracts-toolbar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.contracts-entity-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-nav-active);
+  color: var(--color-primary);
+  font-size: var(--text-meta);
+  font-weight: var(--font-weight-semibold);
+}
+
+.contracts-search {
+  flex: 1;
+  min-width: 12rem;
+  height: var(--control-height);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  padding: 0 var(--control-padding-x);
+  font: inherit;
+}
+
+.contracts-new-btn {
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.contracts-new-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.contracts-status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.contracts-status-pill {
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.contracts-status-pill.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-nav-active);
+  color: var(--color-primary);
+}
+
+.contracts-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.contracts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+}
+
+.contracts-table th,
+.contracts-table td {
+  padding: var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-stroke);
+  vertical-align: top;
+}
+
+.contracts-table th {
+  font-size: var(--text-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-subtext);
+}
+
+.contracts-badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-meta);
+  font-weight: var(--font-weight-semibold);
+}
+
+.contracts-badge.status-active {
+  background: var(--color-status-paid-bg);
+  color: var(--color-status-paid);
+}
+
+.contracts-badge.status-on_hold,
+.contracts-badge.status-support {
+  background: var(--color-status-pending-bg);
+  color: var(--color-status-pending);
+}
+
+.contracts-badge.status-cancelled {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.contracts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.contracts-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.contracts-error,
+.contract-wizard-hint {
+  color: var(--color-danger);
+  margin: 0;
+}
+
+.contract-wizard-hint {
+  color: var(--color-subtext);
+}
+
+.contract-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: min(36rem, 100%);
+}
+
+.contract-wizard-entity {
+  margin: 0;
+  color: var(--color-subtext);
+  font-size: var(--text-meta);
+}
+
+.contract-wizard-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.contract-wizard-step label,
+.contract-wizard-step fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-body);
+}
+
+.contract-wizard-step input,
+.contract-wizard-step select,
+.contract-wizard-step textarea {
+  height: auto;
+  min-height: 40px;
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  padding: var(--control-padding-y) var(--control-padding-x);
+  font: inherit;
+}
+
+.contract-wizard-step fieldset label {
+  flex-direction: row;
+  align-items: center;
+}
+
+.contract-milestones-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.contract-milestones-header h3 {
+  margin: 0;
+  font-size: var(--text-body);
+}
+
+.contract-milestone-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.contract-cumulative {
+  font-size: var(--text-meta);
+  color: var(--color-subtext);
+}
+
+.contract-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-stroke);
+}
+
+.contract-detail-section h3 {
+  margin: 0;
+  font-size: var(--text-body);
+}
+
+.contract-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.contract-detail-grid dt {
+  font-size: var(--text-meta);
+  color: var(--color-subtext);
+  margin: 0 0 var(--space-1);
+}
+
+.contract-detail-grid dd {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.ui-modal {
+  max-width: 42rem;
+}

@@ -3,6 +3,7 @@ import createClient from "openapi-fetch";
 import type { paths } from "./schema";
 import { refreshSession } from "../auth/refresh";
 import { getAccessToken } from "../auth/tokens";
+import { getActiveEntityHeader } from "../entity/entityHeader";
 
 export const apiClient = createClient<paths>({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/v1",
@@ -13,6 +14,10 @@ apiClient.use({
     const token = getAccessToken();
     if (token) {
       request.headers.set("Authorization", `Bearer ${token}`);
+    }
+    const path = new URL(request.url).pathname;
+    if (path.includes("/contracts") || path.endsWith("/entities")) {
+      request.headers.set("X-Entity-Id", getActiveEntityHeader());
     }
     return request;
   },

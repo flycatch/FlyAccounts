@@ -372,13 +372,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List legal entities for the Entity Switcher */
+        get: operations["listEntities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List contracts scoped by X-Entity-Id
+         * @description Requires manage_contracts. Financial amount fields are omitted when the caller lacks view_contract_financials.
+         */
+        get: operations["listContracts"];
+        put?: never;
+        /**
+         * Create a Step-1 draft contract
+         * @description Requires manage_contracts and a concrete X-Entity-Id. Creates a draft with server-generated reference. Later steps use PATCH.
+         */
+        post: operations["createContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a client contract file (.pdf or .docx) */
+        post: operations["uploadContractFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{contractId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a contract by id */
+        get: operations["getContract"];
+        put?: never;
+        post?: never;
+        /**
+         * Soft-delete a contract (Finance)
+         * @description Requires manage_contracts and view_contract_financials.
+         */
+        delete: operations["deleteContract"];
+        options?: never;
+        head?: never;
+        /** Update/complete a draft contract (steps 2–4) */
+        patch: operations["updateContract"];
+        trace?: never;
+    };
+    "/contracts/closure-owners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users eligible as closure owners */
+        get: operations["listClosureOwners"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         ErrorResponse: {
             /** @enum {string} */
-            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required" | "duplicate_invite" | "already_present" | "duplicate_role_name" | "role_still_assigned" | "duplicate_permission";
+            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required" | "duplicate_invite" | "already_present" | "duplicate_role_name" | "role_still_assigned" | "duplicate_permission" | "validation_error" | "entity_context_required" | "invalid_currency" | "invalid_file_type";
             message: string;
         };
         MicrosoftTokenRequest: {
@@ -527,6 +624,183 @@ export interface components {
              */
             storage: "ok" | "unavailable";
         };
+        LegalEntity: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            code: "entity_a" | "entity_b" | "entity_c";
+            name: string;
+            allowedCurrencies: ("INR" | "USD" | "SAR")[];
+            active: boolean;
+        };
+        EntitiesResponse: {
+            entities: components["schemas"]["LegalEntity"][];
+        };
+        ContractMilestone: {
+            name: string;
+            /** @description Decimal string */
+            value: string;
+            dueConditionOrDate: string;
+            sortOrder: number;
+        };
+        ContractResource: {
+            /** @enum {string} */
+            mode: "inhouse" | "vendor";
+            /** Format: uuid */
+            resourceUserId?: string;
+            resourceName?: string;
+            allocationPercent?: number;
+            /** @description Decimal string; omitted without view_contract_financials */
+            costOfResource?: string;
+            vendorContractRef?: string;
+            vendorContractFileKey?: string;
+            monthlyVendorInvoice?: string;
+            monthlyVendorInvoiceFileKey?: string;
+            tdsPaidPayable?: string;
+            gstPaidPayable?: string;
+        };
+        ContractSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            entityId: string;
+            entityName: string;
+            reference: string;
+            /** @enum {string} */
+            category: "time_and_material" | "data_management" | "contract_staffing";
+            /** @enum {string} */
+            currency: "INR" | "USD" | "SAR";
+            isAmendment: boolean;
+            /** Format: uuid */
+            parentContractId?: string;
+            /** Format: uuid */
+            closureOwnerUserId?: string;
+            closureOwnerName?: string;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            /** @enum {string} */
+            projectStatus?: "active" | "on_hold" | "support" | "cancelled";
+            pmoNote?: string;
+            /** @enum {string} */
+            paymentType?: "project_value" | "monthly";
+            /** @description Omitted without view_contract_financials */
+            projectValue?: string;
+            /** @description Omitted without view_contract_financials */
+            monthlyRate?: string;
+            months?: number;
+            /** @description Human-readable payment summary; redacted without view_contract_financials */
+            paymentDisplay?: string;
+            /** @enum {string} */
+            resourceType?: "inhouse" | "vendor";
+            clientFileKey?: string;
+            /** Format: date-time */
+            createdAt: string;
+            isDraft: boolean;
+            clientFileName?: string;
+            clientFileContentType?: string;
+            clientFileSizeBytes?: number;
+            milestones?: components["schemas"]["ContractMilestone"][];
+            resource?: components["schemas"]["ContractResource"];
+        };
+        ContractsResponse: {
+            contracts: components["schemas"]["ContractSummary"][];
+        };
+        CreateContractRequest: {
+            clientFileKey: string;
+            isAmendment: boolean;
+            /** Format: uuid */
+            parentContractId?: string;
+            /** @enum {string} */
+            category: "time_and_material" | "data_management" | "contract_staffing";
+            /** @enum {string} */
+            currency: "INR" | "USD" | "SAR";
+            clientFileName?: string;
+            clientFileContentType?: string;
+            clientFileSizeBytes?: number;
+        };
+        ContractFileUploadResponse: {
+            fileKey: string;
+            fileName: string;
+            contentType: string;
+            sizeBytes: number;
+        };
+        UpdateContractRequest: {
+            /** Format: uuid */
+            closureOwnerUserId?: string;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            /** @enum {string} */
+            projectStatus?: "active" | "on_hold" | "support" | "cancelled";
+            pmoNote?: string;
+            /** @enum {string} */
+            paymentType?: "project_value" | "monthly";
+            projectValue?: string;
+            monthlyRate?: string;
+            months?: number;
+            milestones?: components["schemas"]["ContractMilestone"][];
+            /** @enum {string} */
+            resourceType?: "inhouse" | "vendor";
+            resource?: components["schemas"]["ContractResource"];
+            /** @description When true after Step 4 fields are valid, sets isDraft false. */
+            complete?: boolean;
+        };
+        ContractDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            entityId: string;
+            entityName: string;
+            reference: string;
+            /** @enum {string} */
+            category: "time_and_material" | "data_management" | "contract_staffing";
+            /** @enum {string} */
+            currency: "INR" | "USD" | "SAR";
+            isAmendment: boolean;
+            /** Format: uuid */
+            parentContractId?: string;
+            /** Format: uuid */
+            closureOwnerUserId?: string;
+            closureOwnerName?: string;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            /** @enum {string} */
+            projectStatus?: "active" | "on_hold" | "support" | "cancelled";
+            pmoNote?: string;
+            /** @enum {string} */
+            paymentType?: "project_value" | "monthly";
+            /** @description Omitted without view_contract_financials */
+            projectValue?: string;
+            /** @description Omitted without view_contract_financials */
+            monthlyRate?: string;
+            months?: number;
+            /** @description Human-readable payment summary; redacted without view_contract_financials */
+            paymentDisplay?: string;
+            /** @enum {string} */
+            resourceType?: "inhouse" | "vendor";
+            clientFileKey?: string;
+            /** Format: date-time */
+            createdAt: string;
+            isDraft: boolean;
+            clientFileName?: string;
+            clientFileContentType?: string;
+            clientFileSizeBytes?: number;
+            milestones?: components["schemas"]["ContractMilestone"][];
+            resource?: components["schemas"]["ContractResource"];
+        };
+        ClosureOwner: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+        };
+        ClosureOwnersResponse: {
+            owners: components["schemas"]["ClosureOwner"][];
+        };
     };
     responses: never;
     parameters: {
@@ -534,6 +808,8 @@ export interface components {
         RoleId: string;
         InviteId: string;
         PermissionId: string;
+        /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+        EntityIdHeader: string;
     };
     requestBodies: never;
     headers: never;
@@ -1555,6 +1831,405 @@ export interface operations {
                 };
             };
             /** @description Combined permissions do not include the required manage_* permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listEntities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active legal entities. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitiesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden or pending access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listContracts: {
+        parameters: {
+            query?: {
+                status?: "all" | "active" | "on_hold" | "support" | "cancelled";
+                /** @description Search by contract reference or closure owner name */
+                q?: string;
+            };
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contracts in entity context. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createContract: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Draft created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractSummary"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden or All Entities create rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    uploadContractFile: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractFileUploadResponse"];
+                };
+            };
+            /** @description Invalid file type */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getContract: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                contractId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contract detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteContract: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                contractId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateContract: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                contractId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateContractRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractDetail"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listClosureOwners: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owners */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosureOwnersResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;

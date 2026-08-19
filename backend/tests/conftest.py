@@ -15,12 +15,23 @@ from app.core.errors import ApiError
 from app.core.security import issue_access_token
 from app.db.session import get_db
 from app.main import app
-from app.models import Base, Invite, InviteRole, Permission, Role, RoleAssignment, RolePermission, User
+from app.models import (
+    Base,
+    Contract,
+    Invite,
+    InviteRole,
+    LegalEntity,
+    Permission,
+    Role,
+    RoleAssignment,
+    RolePermission,
+    User,
+)
 
 FEATURE_OPENAPI = (
     Path(__file__).resolve().parents[2]
     / "specs"
-    / "004-settings-routes-rbac"
+    / "005-contracts-module"
     / "contracts"
     / "openapi.yaml"
 )
@@ -47,16 +58,31 @@ PERMISSION_SEED = [
         None,
         "Open Settings → Permissions and view the permission catalog.",
     ),
+    (
+        "manage_contracts",
+        "Manage contracts",
+        "contracts",
+        None,
+        "Open Contracts, list contracts, and create contracts for the active entity.",
+    ),
+    (
+        "view_contract_financials",
+        "View contract financials",
+        "contracts",
+        None,
+        "See contract cost, value, rates, and other money fields.",
+    ),
 ]
 
 ROLE_SEED = [
     (
         "System Admin",
-        "Manage users, roles, and permissions",
-        ["manage_users", "manage_roles", "manage_permissions"],
+        "Manage users, roles, permissions, and contracts",
+        ["manage_users", "manage_roles", "manage_permissions", "manage_contracts", "view_contract_financials"],
     ),
     ("Member", "General member with no settings permissions", []),
     ("Operator", "Operator with no settings permissions", []),
+    ("Contracts HR", "Contracts without financials", ["manage_contracts"]),
 ]
 
 
@@ -85,6 +111,28 @@ def seed_rbac(db: Session) -> dict[str, Role]:
     db.flush()
     return roles
 
+
+ENTITY_SEED = [
+    ("entity_a", "Entity A", ["INR", "USD"]),
+    ("entity_b", "Entity B", ["INR", "USD"]),
+    ("entity_c", "Entity C", ["SAR", "USD"]),
+]
+
+
+def seed_entities(db: Session) -> dict[str, LegalEntity]:
+    entities: dict[str, LegalEntity] = {}
+    for code, name, currencies in ENTITY_SEED:
+        entity = LegalEntity(
+            id=uuid.uuid5(uuid.NAMESPACE_DNS, f"flyaccounts.entity.{code}"),
+            code=code,
+            name=name,
+            allowed_currencies=currencies,
+            active=True,
+        )
+        db.add(entity)
+        entities[code] = entity
+    db.flush()
+    return entities
 
 
 def create_role(db: Session, name: str, *, description: str | None = None, codes: list[str] | None = None) -> Role:
@@ -215,6 +263,7 @@ def db(sqlite_engine) -> Session:
     factory = sessionmaker(bind=sqlite_engine, autoflush=False, expire_on_commit=False)
     session = factory()
     seed_rbac(session)
+    seed_entities(session)
     session.commit()
     try:
         yield session

@@ -6,6 +6,7 @@ type SidebarProps = {
   canUsers: boolean;
   canRoles: boolean;
   canPermissions: boolean;
+  canContracts: boolean;
   open?: boolean;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
@@ -17,11 +18,13 @@ export function Sidebar({
   canUsers,
   canRoles,
   canPermissions,
+  canContracts,
   open = false,
   onNavigate,
   onSignOut,
 }: SidebarProps) {
   const homeActive = pathname === "/";
+  const contractsActive = pathname.startsWith("/contracts");
   return (
     <aside className={`app-shell-sidebar${open ? " is-open" : ""}`} id="app-sidebar">
       <p className="app-shell-brand">
@@ -36,6 +39,15 @@ export function Sidebar({
         >
           Home
         </button>
+        {canContracts ? (
+          <button
+            type="button"
+            className={`app-shell-nav-item${contractsActive ? " is-active" : ""}`}
+            onClick={() => onNavigate("/contracts")}
+          >
+            Contracts
+          </button>
+        ) : null}
         {showSettings ? (
           <>
             <p className="app-shell-nav-group">Settings</p>

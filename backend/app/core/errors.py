@@ -17,6 +17,10 @@ ERROR_ALREADY_PRESENT = "already_present"
 ERROR_DUPLICATE_ROLE_NAME = "duplicate_role_name"
 ERROR_DUPLICATE_PERMISSION = "duplicate_permission"
 ERROR_ROLE_STILL_ASSIGNED = "role_still_assigned"
+ERROR_VALIDATION = "validation_error"
+ERROR_ENTITY_CONTEXT_REQUIRED = "entity_context_required"
+ERROR_INVALID_CURRENCY = "invalid_currency"
+ERROR_INVALID_FILE_TYPE = "invalid_file_type"
 
 
 class ApiError(Exception):
@@ -83,6 +87,24 @@ def duplicate_permission(message: str = "That permission is already attached to 
 
 def role_still_assigned(message: str = "That role is still assigned to a person.") -> ApiError:
     return ApiError(409, ERROR_ROLE_STILL_ASSIGNED, message)
+
+
+def validation_error(message: str = "The request is invalid.") -> ApiError:
+    return ApiError(400, ERROR_VALIDATION, message)
+
+
+def entity_context_required(
+    message: str = "Select a single entity before creating a contract.",
+) -> ApiError:
+    return ApiError(403, ERROR_ENTITY_CONTEXT_REQUIRED, message)
+
+
+def invalid_currency(message: str = "That currency is not allowed for this entity.") -> ApiError:
+    return ApiError(400, ERROR_INVALID_CURRENCY, message)
+
+
+def invalid_file_type(message: str = "Only .pdf and .docx files are accepted.") -> ApiError:
+    return ApiError(400, ERROR_INVALID_FILE_TYPE, message)
 
 
 async def api_error_handler(_request: Request, exc: ApiError) -> JSONResponse:

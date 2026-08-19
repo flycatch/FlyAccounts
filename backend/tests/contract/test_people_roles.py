@@ -35,10 +35,16 @@ def test_people_and_roles_require_admin(client, db):
     roles = client.get("/v1/roles", headers=auth_header(admin))
     assert roles.status_code == 200
     names = {role["name"] for role in roles.json()["roles"]}
-    assert names == {"System Admin", "Member", "Operator"}
+    assert names == {"System Admin", "Member", "Operator", "Contracts HR"}
     system_admin = next(role for role in roles.json()["roles"] if role["name"] == "System Admin")
     assert "permissions" in system_admin
     keys = {permission["permission"] for permission in system_admin["permissions"]}
-    assert keys == {"manage_users", "manage_roles", "manage_permissions"}
+    assert keys == {
+        "manage_users",
+        "manage_roles",
+        "manage_permissions",
+        "manage_contracts",
+        "view_contract_financials",
+    }
     member_role = next(role for role in roles.json()["roles"] if role["name"] == "Member")
     assert member_role["permissions"] == []

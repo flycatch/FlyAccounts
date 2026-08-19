@@ -10,9 +10,11 @@ import jwt
 
 from app.core.errors import forbidden, pending_access, unauthorized
 from app.core.permissions import (
+    MANAGE_CONTRACTS,
     MANAGE_PERMISSIONS,
     MANAGE_ROLES,
     MANAGE_USERS,
+    VIEW_CONTRACT_FINANCIALS,
     load_assigned_roles,
     load_combined_permissions,
 )
@@ -74,3 +76,14 @@ def require_manage_roles(current: CurrentUser = Depends(get_current_user)) -> Cu
 
 def require_manage_permissions(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
     return _require_permission(current, MANAGE_PERMISSIONS)
+
+
+def require_manage_contracts(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    return _require_permission(current, MANAGE_CONTRACTS)
+
+
+def require_delete_contracts(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    if MANAGE_CONTRACTS not in current.permissions or VIEW_CONTRACT_FINANCIALS not in current.permissions:
+        raise forbidden()
+    return current
+

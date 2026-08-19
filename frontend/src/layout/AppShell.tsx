@@ -1,10 +1,17 @@
 import { useState, type ReactNode } from "react";
 
+import { EntitySwitcher } from "../entity/EntitySwitcher";
 import { PageHeader } from "./PageHeader";
 import { Sidebar } from "./Sidebar";
 import "./AppShell.css";
 
 function titleForPath(pathname: string): string {
+  if (pathname.startsWith("/contracts/new") || pathname.includes("/setup/")) {
+    return "New Contract";
+  }
+  if (pathname.startsWith("/contracts")) {
+    return "Contracts";
+  }
   if (pathname.startsWith("/settings/users")) {
     return "Users";
   }
@@ -23,6 +30,7 @@ type AppShellProps = {
   canUsers: boolean;
   canRoles: boolean;
   canPermissions: boolean;
+  canContracts: boolean;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
   children: ReactNode;
@@ -34,6 +42,7 @@ export function AppShell({
   canUsers,
   canRoles,
   canPermissions,
+  canContracts,
   onNavigate,
   onSignOut,
   children,
@@ -62,13 +71,14 @@ export function AppShell({
         canUsers={canUsers}
         canRoles={canRoles}
         canPermissions={canPermissions}
+        canContracts={canContracts}
         open={open}
         onNavigate={navigate}
         onSignOut={onSignOut}
       />
       <main className="app-shell-content">
         <div className="app-shell-header-wrap">
-          <PageHeader title={titleForPath(pathname)} />
+          <PageHeader title={titleForPath(pathname)} actions={<EntitySwitcher />} />
         </div>
         <div className="app-shell-main">{children}</div>
       </main>

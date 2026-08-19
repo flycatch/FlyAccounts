@@ -21,6 +21,7 @@ dependencies = [
   "opentelemetry-instrumentation-sqlalchemy>=0.49b0",
   "pyjwt>=2.9.0",
   "cryptography>=43.0.0",
+  "python-multipart>=0.0.12",
 ]
 
 [project.optional-dependencies]

@@ -16,6 +16,7 @@ vi.mock("../src/auth/msal", () => ({
 
 import App from "../src/App";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, clearTokens, signOut, storeTokens } from "../src/auth/tokens";
+import { EntityProvider } from "../src/entity/EntityContext";
 import { AppShell } from "../src/layout/AppShell";
 import { PendingAccessPage } from "../src/pages/PendingAccessPage";
 
@@ -23,10 +24,19 @@ describe("sign out", () => {
   beforeEach(() => {
     clearTokens();
     getMe.mockReset();
-    getMe.mockResolvedValue({
-      data: undefined,
-      error: { code: "unauthorized" },
-      response: { ok: false, status: 401 },
+    getMe.mockImplementation((path: string) => {
+      if (path === "/entities") {
+        return Promise.resolve({
+          data: { entities: [] },
+          error: undefined,
+          response: { ok: true },
+        });
+      }
+      return Promise.resolve({
+        data: undefined,
+        error: { code: "unauthorized" },
+        response: { ok: false, status: 401 },
+      });
     });
   });
 
@@ -43,19 +53,22 @@ describe("sign out", () => {
   it("clears tokens from the app shell sidebar", async () => {
     storeTokens("access-1", "refresh-1");
     render(
-      <AppShell
-        pathname="/"
-        showSettings={false}
-        canUsers={false}
-        canRoles={false}
-        canPermissions={false}
-        onNavigate={() => undefined}
-        onSignOut={() => {
-          void signOut();
-        }}
-      >
-        <p>Home content</p>
-      </AppShell>,
+      <EntityProvider>
+        <AppShell
+          pathname="/"
+          showSettings={false}
+          canUsers={false}
+          canRoles={false}
+          canPermissions={false}
+          canContracts={false}
+          onNavigate={() => undefined}
+          onSignOut={() => {
+            void signOut();
+          }}
+        >
+          <p>Home content</p>
+        </AppShell>
+      </EntityProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: /sign out/i }));
     await waitFor(() => {

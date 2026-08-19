@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import uuid
+
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
@@ -33,3 +37,17 @@ def check_storage() -> str:
         return "ok"
     except Exception:
         return "unavailable"
+
+
+def upload_bytes(*, data: bytes, content_type: str, filename: str, prefix: str = "contracts") -> str:
+    settings = get_settings()
+    ensure_bucket()
+    safe_name = filename.replace("/", "_").replace("\\", "_")
+    key = f"{prefix}/{uuid.uuid4()}/{safe_name}"
+    _client().put_object(
+        Bucket=settings.s3_bucket,
+        Key=key,
+        Body=data,
+        ContentType=content_type or "application/octet-stream",
+    )
+    return key
