@@ -147,10 +147,7 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
             <dt>Reference</dt>
             <dd>{contract.reference}</dd>
           </div>
-          <div>
-            <dt>Client</dt>
-            <dd>{contract.clientName ?? "—"}</dd>
-          </div>
+
           <div>
             <dt>Category</dt>
             <dd>{CATEGORY_LABELS[contract.category] ?? contract.category}</dd>

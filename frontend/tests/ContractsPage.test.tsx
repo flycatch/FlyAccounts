@@ -96,8 +96,7 @@ function mockApis(me: typeof financeMe) {
           contracts: [
             {
               ...listContract,
-              clientId: "bbbbbbbb-0000-4000-8000-000000000001",
-              clientName: "Acme Corp",
+
               projectValue: me.permissions.includes("view_contract_financials")
                 ? "1000.00"
                 : undefined,
@@ -389,9 +388,7 @@ describe("Contracts module UI", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /^contracts$/i }));
     fireEvent.click(await screen.findByRole("button", { name: /\+ new contract/i }));
-    fireEvent.change(await screen.findByLabelText(/^client$/i), {
-      target: { value: "bbbbbbbb-0000-4000-8000-000000000001" },
-    });
+
     fireEvent.click(await screen.findByRole("button", { name: /^continue$/i }));
 
     expect(await screen.findByText(/upload a contract document/i)).toBeInTheDocument();

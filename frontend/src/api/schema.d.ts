@@ -758,9 +758,6 @@ export interface components {
             clientFileSizeBytes?: number;
             milestones?: components["schemas"]["ContractMilestone"][];
             resource?: components["schemas"]["ContractResource"];
-            /** Format: uuid */
-            clientId?: string;
-            clientName?: string;
         };
         ContractsResponse: {
             contracts: components["schemas"]["ContractSummary"][];
@@ -781,8 +778,6 @@ export interface components {
             clientFileName?: string;
             clientFileContentType?: string;
             clientFileSizeBytes?: number;
-            /** Format: uuid */
-            clientId: string;
         };
         ContractFileUploadResponse: {
             fileKey: string;
@@ -791,6 +786,17 @@ export interface components {
             sizeBytes: number;
         };
         UpdateContractRequest: {
+            /** @enum {string} */
+            category?: "time_and_material" | "data_management" | "contract_staffing";
+            /** @enum {string} */
+            currency?: "INR" | "USD" | "SAR";
+            clientFileKey?: string;
+            clientFileName?: string;
+            clientFileContentType?: string;
+            clientFileSizeBytes?: number;
+            isAmendment?: boolean;
+            /** Format: uuid */
+            parentContractId?: string | null;
             /** Format: uuid */
             closureOwnerUserId?: string;
             /** Format: date */
@@ -811,8 +817,6 @@ export interface components {
             resource?: components["schemas"]["ContractResource"];
             /** @description When true after Step 3 fields are valid, sets isDraft false. */
             complete?: boolean;
-            /** Format: uuid */
-            clientId?: string;
         };
         ContractDetail: {
             /** Format: uuid */
@@ -859,9 +863,6 @@ export interface components {
             clientFileSizeBytes?: number;
             milestones?: components["schemas"]["ContractMilestone"][];
             resource?: components["schemas"]["ContractResource"];
-            /** Format: uuid */
-            clientId?: string;
-            clientName?: string;
         };
         ClosureOwner: {
             /** Format: uuid */

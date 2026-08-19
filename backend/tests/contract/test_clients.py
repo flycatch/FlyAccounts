@@ -70,35 +70,7 @@ def test_clients_crud_and_search_pagination(client, db: Session):
     assert deleted.status_code == 204
 
 
-def test_delete_client_in_use(client, db: Session):
-    from datetime import datetime, timezone
 
-    from sqlalchemy import select
-
-    from app.models import Contract, LegalEntity
-
-    admin = _admin(db)
-    party = create_client(db, name="Linked Client")
-    entity = db.scalars(select(LegalEntity).where(LegalEntity.code == "entity_a")).one()
-    db.add(
-        Contract(
-            entity_id=entity.id,
-            reference="CTR-LINK",
-            category="time_and_material",
-            currency="INR",
-            is_amendment=False,
-            is_draft=True,
-            client_id=party.id,
-            client_file_key="contracts/x.pdf",
-            created_by_user_id=admin.id,
-            created_at=datetime.now(timezone.utc),
-        )
-    )
-    db.commit()
-
-    response = client.delete(f"/v1/clients/{party.id}", headers=auth_header(admin))
-    assert response.status_code == 409
-    assert response.json()["code"] == "client_in_use"
 
 
 def test_clients_require_manage_contracts(client, db: Session):

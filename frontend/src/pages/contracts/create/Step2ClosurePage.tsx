@@ -152,7 +152,7 @@ export function Step2ClosurePage({ me }: Step2ClosurePageProps) {
       error={error}
       footer={
         <>
-          <button type="button" onClick={() => navigate("/contracts/new")} disabled={submitting}>
+          <button type="button" onClick={() => navigate(`/contracts/${contractId}/setup/1`)} disabled={submitting}>
             Back
           </button>
           <button

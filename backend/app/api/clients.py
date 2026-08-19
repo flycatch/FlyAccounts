@@ -186,16 +186,7 @@ def delete_client(
     client = db.get(Client, client_id)
     if client is None:
         raise not_found("Client was not found.")
-    linked = db.scalar(
-        select(func.count())
-        .select_from(Contract)
-        .where(Contract.client_id == client_id, Contract.deleted_at.is_(None))
-    )
-    count = int(linked or 0)
-    if count > 0:
-        raise client_in_use(
-            f"This client is linked to {count} contract{'s' if count != 1 else ''} and cannot be deleted."
-        )
+
     db.delete(client)
     db.commit()
     return Response(status_code=204)

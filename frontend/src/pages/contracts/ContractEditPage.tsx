@@ -14,7 +14,6 @@ import "./create/ContractCreate.css";
 
 type MeResponse = components["schemas"]["MeResponse"];
 type ContractDetail = components["schemas"]["ContractDetail"];
-type Client = components["schemas"]["Client"];
 
 const STATUSES = [
   { value: "active", label: "Active" },
@@ -40,8 +39,6 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
   const canViewFinancials = me.permissions.includes("view_contract_financials");
   const [contract, setContract] = useState<ContractDetail | null>(null);
   const [owners, setOwners] = useState<{ id: string; displayName: string }[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState("");
   const [closureOwnerUserId, setClosureOwnerUserId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -62,7 +59,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [detail, ownersRes, clientsRes] = await Promise.all([
+      const [detail, ownersRes] = await Promise.all([
         apiClient.GET("/contracts/{contractId}", {
           params: {
             path: { contractId },
@@ -70,7 +67,6 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
           },
         }),
         apiClient.GET("/contracts/closure-owners"),
-        apiClient.GET("/clients", { params: { query: { pageSize: 50, page: 1 } } }),
       ]);
       if (cancelled) {
         return;
@@ -85,10 +81,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
       if (ownersRes.response.ok && ownersRes.data) {
         setOwners(ownersRes.data.owners);
       }
-      if (clientsRes.response.ok && clientsRes.data) {
-        setClients(clientsRes.data.clients);
-      }
-      setClientId(data.clientId ?? "");
+
       setClosureOwnerUserId(data.closureOwnerUserId ?? me.id);
       setStartDate(data.startDate ?? "");
       setEndDate(data.endDate ?? "");
@@ -135,9 +128,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
 
   function validate(): boolean {
     const next: Record<string, string> = {};
-    if (!clientId) {
-      next.client = "Client is required.";
-    }
+
     if (!closureOwnerUserId) {
       next.owner = "Closure owner is required.";
     }
@@ -184,7 +175,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
     setSubmitting(true);
     setError(null);
     const body: components["schemas"]["UpdateContractRequest"] = {
-      clientId: clientId || undefined,
+
       closureOwnerUserId,
       startDate,
       endDate,
@@ -272,28 +263,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
       </section>
 
       <section className="contract-detail-section contract-create-fields">
-        <h3>Client & closure</h3>
-        <SelectField
-          label="Client"
-          value={clientId}
-          error={fieldErrors.client}
-          onChange={(event) => {
-            setClientId(event.target.value);
-            setFieldErrors((prev) => ({ ...prev, client: "" }));
-          }}
-          onBlur={() => {
-            if (!clientId) {
-              setFieldErrors((prev) => ({ ...prev, client: "Client is required." }));
-            }
-          }}
-        >
-          <option value="">Select client</option>
-          {clients.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </SelectField>
+        <h3>Closure</h3>
         <SelectField
           label="Closure Owner"
           value={closureOwnerUserId}

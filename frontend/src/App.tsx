@@ -88,6 +88,14 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
               }
             />
             <Route
+              path="/contracts/:contractId/setup/1"
+              element={
+                <SettingsGate me={me} permission="manage_contracts">
+                  <Step1UploadPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
               path="/contracts/:contractId/setup/2"
               element={
                 <SettingsGate me={me} permission="manage_contracts">

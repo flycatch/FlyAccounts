@@ -14,7 +14,7 @@
 
 - Q: Client scope? → A: Global — one client list shared across all legal entities. Contracts still belong to an entity via `X-Entity-Id`.
 - Q: Client form required fields? → A: All fields except Notes (Name, Address, Contact Person, Contact Email, Contact Phone, VAT/Tax Registration Number).
-- Q: Contract client reference? → A: Create requires selecting an existing client (`clientId`). Column is nullable for existing rows.
+- Q: Contract client reference? → A: Removed (contracts no longer reference clients).
 - Q: Speckit artifacts? → A: Only `spec.md` for this feature (no plan/research/tasks/openapi copies under 006).
 
 ## User Scenarios & Testing *(mandatory)*
@@ -36,19 +36,7 @@ A person with `manage_contracts` opens Clients from the sidebar and creates, vie
 
 ---
 
-### User Story 2 - Contracts reference existing clients (Priority: P1)
-
-When creating a contract (step 1), the person must select an existing client. Detail and edit screens show and can change the client. The contracts list shows the client name and search includes it.
-
-**Why this priority**: Client master is useful only if contracts can pick from it.
-
-**Independent Test**: Create a client, create a contract selecting that client, confirm the list and detail show the client name.
-
-**Acceptance Scenarios**:
-
-1. **Given** at least one client exists and a single entity is selected, **When** the person creates a contract without a client, **Then** create is refused.
-2. **Given** a client is selected on create, **When** the contract is saved, **Then** list and detail show that client’s name.
-3. **Given** an existing contract, **When** they change the client on edit, **Then** the new client is persisted.
+### User Story 2 - [DELETED] (Contracts no longer reference clients)
 
 ---
 
@@ -71,7 +59,7 @@ Clients, Contracts, Users, and Roles lists support server-side search, page size
 
 ### User Story 4 - Form validation on blur and submit (Priority: P1)
 
-Client, invite, role, and contract client-picker forms validate required fields and email format on blur and on submit. Inline errors appear beside fields without interrupting typing or stealing focus. No API call is made while typing for validation alone.
+Client, invite, and role forms validate required fields and email format on blur and on submit. Inline errors appear beside fields without interrupting typing or stealing focus. No API call is made while typing for validation alone.
 
 **Why this priority**: Clear field errors reduce failed submissions and match the design system field chrome.
 
@@ -112,7 +100,7 @@ Successful create/update/delete and other user-triggered mutations (assign, revo
 - **FR-001**: System MUST provide global Client CRUD via `/clients` gated by `manage_contracts`.
 - **FR-002**: Client create/update MUST require Name, Address, Contact Person, Contact Email, Contact Phone, and VAT; Notes optional; email format validated.
 - **FR-003**: Deleting a client linked to non-deleted contracts MUST fail with `client_in_use`.
-- **FR-004**: Contract create MUST require `clientId`; list/detail/edit MUST expose client identity.
+- **FR-004**: [DELETED] (Contracts no longer reference clients).
 - **FR-005**: `GET /clients`, `/contracts`, `/people`, and `/roles` MUST support `search`, `page`, and `pageSize` with `total` in the response.
 - **FR-006**: List UIs MUST sync `search`, `page`, and `pageSize` to the URL and reset page when search changes.
 - **FR-007**: Forms in scope MUST validate on blur and submit with inline field errors.
@@ -121,7 +109,7 @@ Successful create/update/delete and other user-triggered mutations (assign, revo
 ## Success Criteria
 
 - Clients sidebar page with modal Create/View/Edit/Delete works end-to-end.
-- New contracts require an existing client; lists show client name.
+- [DELETED] (Contracts no longer reference clients).
 - Clients, Contracts, Users, and Roles lists are server-paginated and URL-driven.
 - Validation is blur+submit with inline errors; mutations use toasts.
 - OpenAPI remains SSOT; backend and frontend tests cover clients, pagination, and dependency delete.

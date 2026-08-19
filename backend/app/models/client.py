@@ -26,4 +26,4 @@ class Client(Base):
     notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
 
-    contracts: Mapped[list["Contract"]] = relationship(back_populates="client")
+

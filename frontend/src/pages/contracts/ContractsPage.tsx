@@ -133,7 +133,7 @@ export function ContractsPage({ me }: ContractsPageProps) {
           <input
             className="contracts-search"
             type="search"
-            placeholder="Search reference, closure owner, or client"
+            placeholder="Search reference or closure owner"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             aria-label="Search contracts"
@@ -175,7 +175,6 @@ export function ContractsPage({ me }: ContractsPageProps) {
               <thead>
                 <tr>
                   <th>Contract Reference</th>
-                  <th>Client</th>
                   <th>Category</th>
                   <th>Closure Owner</th>
                   <th>Contract Period</th>
@@ -187,7 +186,7 @@ export function ContractsPage({ me }: ContractsPageProps) {
               <tbody>
                 {contracts.length === 0 ? (
                   <tr>
-                    <td colSpan={8}>{emptyMessage}</td>
+                    <td colSpan={7}>{emptyMessage}</td>
                   </tr>
                 ) : (
                   contracts.map((contract) => (
@@ -200,7 +199,7 @@ export function ContractsPage({ me }: ContractsPageProps) {
                           </span>
                         ) : null}
                       </td>
-                      <td>{contract.clientName ?? "—"}</td>
+
                       <td>{CATEGORY_LABELS[contract.category] ?? contract.category}</td>
                       <td>{contract.closureOwnerName ?? "—"}</td>
                       <td>

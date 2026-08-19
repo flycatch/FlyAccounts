@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import type { components } from "../../../api/schema";
 import { apiClient } from "../../../api/client";
@@ -12,7 +12,7 @@ import { ContractCreateLayout } from "./ContractCreateLayout";
 
 type MeResponse = components["schemas"]["MeResponse"];
 type ContractSummary = components["schemas"]["ContractSummary"];
-type Client = components["schemas"]["Client"];
+type ContractDetail = components["schemas"]["ContractDetail"];
 
 const CATEGORIES = [
   { value: "time_and_material", label: "Time & Material" },
@@ -57,6 +57,7 @@ type Step1UploadPageProps = {
 
 export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
   const navigate = useNavigate();
+  const { contractId = "" } = useParams();
   const { isAllEntities, selectedEntity, entityHeaderValue } = useEntityContext();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -65,9 +66,9 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
   const [parentContractId, setParentContractId] = useState("");
   const [parentError, setParentError] = useState<string | undefined>();
   const [fileError, setFileError] = useState<string | undefined>();
-  const [clientId, setClientId] = useState("");
-  const [clientError, setClientError] = useState<string | undefined>();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [existingFileMeta, setExistingFileMeta] = useState<{ name: string; key: string } | null>(null);
+  const [contract, setContract] = useState<ContractDetail | null>(null);
+
   const [existingContracts, setExistingContracts] = useState<ContractSummary[]>([]);
   const [parentSearch, setParentSearch] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]["value"]>("time_and_material");
@@ -129,18 +130,46 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
     }
   }
 
-  async function loadClients() {
-    const { data, response } = await apiClient.GET("/clients", {
-      params: { query: { pageSize: 50, page: 1 } },
-    });
-    if (response.ok && data) {
-      setClients(data.clients);
-    }
-  }
-
   useEffect(() => {
-    void loadClients();
-  }, []);
+    if (!contractId) {
+      return;
+    }
+    let cancelled = false;
+    async function loadDraft() {
+      const { data, response } = await apiClient.GET("/contracts/{contractId}", {
+        params: {
+          path: { contractId },
+          header: { "X-Entity-Id": entityHeaderValue },
+        },
+      });
+      if (cancelled) {
+        return;
+      }
+      if (response.ok && data) {
+        setContract(data);
+        setIsAmendment(data.isAmendment);
+        if (data.parentContractId) {
+          setParentContractId(data.parentContractId);
+        }
+        if (data.category) {
+          setCategory(data.category as any);
+        }
+        if (data.currency) {
+          setCurrency(data.currency);
+        }
+        if (data.clientFileKey) {
+          setExistingFileMeta({
+            name: data.clientFileName || "Uploaded Document",
+            key: data.clientFileKey,
+          });
+        }
+      }
+    }
+    void loadDraft();
+    return () => {
+      cancelled = true;
+    };
+  }, [contractId, entityHeaderValue]);
 
   useEffect(() => {
     if (!isAmendment) {
@@ -154,15 +183,8 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
 
   function validate(showAll = false): boolean {
     let ok = true;
-    if (!clientId) {
-      if (showAll) {
-        setClientError("Select a client.");
-      }
-      ok = false;
-    } else {
-      setClientError(undefined);
-    }
-    if (!file) {
+
+    if (!file && !existingFileMeta) {
       if (showAll) {
         setFileError("Upload a contract document (.pdf, .doc, or .docx).");
       }
@@ -197,7 +219,7 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
       setError("Fix the highlighted fields before continuing.");
       return;
     }
-    if (!file) {
+    if (!file && !existingFileMeta) {
       return;
     }
 
@@ -206,48 +228,83 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
     setError(null);
 
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/v1";
-      const uploadResponse = await fetch(`${baseUrl}/contracts/files`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${getAccessToken() ?? ""}`,
-          "X-Entity-Id": entityHeaderValue,
-        },
-        body: form,
-      });
-      if (!uploadResponse.ok) {
-        setError("File upload failed.");
-        return;
-      }
-      const uploadData = (await uploadResponse.json()) as {
-        fileKey: string;
-        fileName: string;
-        contentType: string;
-        sizeBytes: number;
-      };
+      let fileKey = existingFileMeta?.key ?? "";
+      let fileName = existingFileMeta?.name ?? "";
+      let fileContentType = contract?.clientFileContentType ?? "";
+      let fileSize = contract?.clientFileSizeBytes ?? 0;
 
-      const created = await apiClient.POST("/contracts", {
-        body: {
-          clientId,
-          clientFileKey: uploadData.fileKey,
-          clientFileName: uploadData.fileName,
-          clientFileContentType: uploadData.contentType,
-          clientFileSizeBytes: uploadData.sizeBytes,
-          isAmendment,
-          parentContractId: isAmendment ? parentContractId : undefined,
-          category,
-          currency: currency as "INR" | "USD" | "SAR",
-        },
-        params: { header: { "X-Entity-Id": entityHeaderValue } },
-      });
-      if (!created.response.ok || !created.data) {
-        const err = created.error as { message?: string } | undefined;
-        setError(err?.message || "Could not create draft contract.");
-        return;
+      if (file) {
+        const form = new FormData();
+        form.append("file", file);
+        const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/v1";
+        const uploadResponse = await fetch(`${baseUrl}/contracts/files`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${getAccessToken() ?? ""}`,
+            "X-Entity-Id": entityHeaderValue,
+          },
+          body: form,
+        });
+        if (!uploadResponse.ok) {
+          setError("File upload failed.");
+          return;
+        }
+        const uploadData = (await uploadResponse.json()) as {
+          fileKey: string;
+          fileName: string;
+          contentType: string;
+          sizeBytes: number;
+        };
+        fileKey = uploadData.fileKey;
+        fileName = uploadData.fileName;
+        fileContentType = uploadData.contentType;
+        fileSize = uploadData.sizeBytes;
       }
-      navigate(`/contracts/${created.data.id}/setup/2`, { replace: true });
+
+      if (contractId) {
+        const updated = await apiClient.PATCH("/contracts/{contractId}", {
+          params: {
+            path: { contractId },
+            header: { "X-Entity-Id": entityHeaderValue },
+          },
+          body: {
+            category,
+            currency: currency as any,
+            clientFileKey: fileKey,
+            clientFileName: fileName,
+            clientFileContentType: fileContentType,
+            clientFileSizeBytes: fileSize,
+            isAmendment,
+            parentContractId: isAmendment ? parentContractId : null,
+          },
+        });
+        if (!updated.response.ok) {
+          const err = updated.error as { message?: string } | undefined;
+          setError(err?.message || "Could not update draft contract.");
+          return;
+        }
+        navigate(`/contracts/${contractId}/setup/2`, { replace: true });
+      } else {
+        const created = await apiClient.POST("/contracts", {
+          body: {
+            clientFileKey: fileKey,
+            clientFileName: fileName,
+            clientFileContentType: fileContentType,
+            clientFileSizeBytes: fileSize,
+            isAmendment,
+            parentContractId: isAmendment ? parentContractId : undefined,
+            category,
+            currency: currency as any,
+          },
+          params: { header: { "X-Entity-Id": entityHeaderValue } },
+        });
+        if (!created.response.ok || !created.data) {
+          const err = created.error as { message?: string } | undefined;
+          setError(err?.message || "Could not create draft contract.");
+          return;
+        }
+        navigate(`/contracts/${created.data.id}/setup/2`, { replace: true });
+      }
     } finally {
       submitLock.current = false;
       setSubmitting(false);
@@ -280,30 +337,7 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
       }
     >
       <div className="contract-create-fields">
-        <SelectField
-          label="Client"
-          value={clientId}
-          error={clientError}
-          onChange={(event) => {
-            setClientId(event.target.value);
-            setClientError(undefined);
-          }}
-          onBlur={() => {
-            if (!clientId) {
-              setClientError("Select a client.");
-            }
-          }}
-        >
-          <option value="">Select client</option>
-          {clients.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </SelectField>
-        {clients.length === 0 ? (
-          <p className="contract-hint">Create a client first under Clients before starting a contract.</p>
-        ) : null}
+
 
         <div
           className={`contract-file-drop${dragging ? " is-dragging" : ""}${fileError ? " is-invalid" : ""}`}
@@ -352,7 +386,7 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
               event.target.value = "";
             }}
             onBlur={() => {
-              if (!file) {
+              if (!file && !existingFileMeta) {
                 setFileError("Upload a contract document (.pdf, .doc, or .docx).");
               }
             }}
@@ -360,31 +394,41 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
           {fileError ? <span className="ui-field-error">{fileError}</span> : null}
         </div>
 
-        {file ? (
+        {file || existingFileMeta ? (
           <div className="contract-file-preview" data-testid="file-preview">
             <div className="contract-file-meta">
-              <strong>{file.name}</strong>
+              <strong>{file ? file.name : (existingFileMeta?.name ?? "Uploaded Document")}</strong>
               <span>
-                {(fileKind ?? "file").toUpperCase()} · {formatBytes(file.size)}
+                {file
+                  ? (fileKind ?? "file").toUpperCase()
+                  : (existingFileMeta?.name.toLowerCase().endsWith(".pdf") ? "PDF" : "Document")}{" "}
+                {file && ` · ${formatBytes(file.size)}`}
+                {!file && contract?.clientFileSizeBytes ? ` · ${formatBytes(contract.clientFileSizeBytes)}` : ""}
               </span>
             </div>
             <div className="contract-file-actions">
-              {previewUrl && (fileKind === "docx" || fileKind === "doc" || fileKind === "pdf") ? (
+              {file && previewUrl && (fileKind === "docx" || fileKind === "doc" || fileKind === "pdf") ? (
                 <a href={previewUrl} download={file.name}>
                   Download
                 </a>
               ) : null}
-              <button type="button" onClick={() => chooseFile(null)}>
+              <button
+                type="button"
+                onClick={() => {
+                  chooseFile(null);
+                  setExistingFileMeta(null);
+                }}
+              >
                 Remove
               </button>
             </div>
-            {previewUrl && fileKind === "pdf" ? (
+            {file && previewUrl && fileKind === "pdf" ? (
               <iframe title="PDF preview" className="contract-file-frame" src={previewUrl} />
             ) : (
               <p className="contract-hint">
-                {fileKind === "docx" || fileKind === "doc"
+                {file && (fileKind === "docx" || fileKind === "doc")
                   ? "Word preview is not available inline. Use Download to open the file."
-                  : "Preview unavailable in this environment."}
+                  : "Preview unavailable for uploaded draft contract document."}
               </p>
             )}
           </div>

@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: FlyAccounts
   description: 'FlyAccounts API 6.0.0: global Clients CRUD; server-side search/pagination on clients,
-    contracts, people, roles; contracts require clientId on create.'
+    contracts, people, roles.'
   version: 6.0.0
 servers:
 - url: /v1
@@ -2057,11 +2057,7 @@ components:
             $ref: '#/components/schemas/ContractMilestone'
         resource:
           $ref: '#/components/schemas/ContractResource'
-        clientId:
-          type: string
-          format: uuid
-        clientName:
-          type: string
+
     ContractsResponse:
       type: object
       additionalProperties: false
@@ -2095,7 +2091,6 @@ components:
       - isAmendment
       - category
       - currency
-      - clientId
       properties:
         clientFileKey:
           type: string
@@ -2123,9 +2118,7 @@ components:
         clientFileSizeBytes:
           type: integer
           minimum: 0
-        clientId:
-          type: string
-          format: uuid
+
     ContractFileUploadResponse:
       type: object
       additionalProperties: false
@@ -2148,6 +2141,33 @@ components:
       type: object
       additionalProperties: false
       properties:
+        category:
+          type: string
+          enum:
+          - time_and_material
+          - data_management
+          - contract_staffing
+        currency:
+          type: string
+          enum:
+          - INR
+          - USD
+          - SAR
+        clientFileKey:
+          type: string
+        clientFileName:
+          type: string
+        clientFileContentType:
+          type: string
+        clientFileSizeBytes:
+          type: integer
+          minimum: 0
+        isAmendment:
+          type: boolean
+        parentContractId:
+          type: string
+          format: uuid
+          nullable: true
         closureOwnerUserId:
           type: string
           format: uuid
@@ -2192,9 +2212,7 @@ components:
         complete:
           type: boolean
           description: When true after Step 3 fields are valid, sets isDraft false.
-        clientId:
-          type: string
-          format: uuid
+
     ContractDetail:
       type: object
       additionalProperties: false
@@ -2298,11 +2316,7 @@ components:
             $ref: '#/components/schemas/ContractMilestone'
         resource:
           $ref: '#/components/schemas/ContractResource'
-        clientId:
-          type: string
-          format: uuid
-        clientName:
-          type: string
+
     ClosureOwner:
       type: object
       additionalProperties: false
