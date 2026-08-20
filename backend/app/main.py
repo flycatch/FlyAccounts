@@ -12,6 +12,7 @@ from app.api.entities import router as entities_router
 from app.api.me import router as me_router
 from app.api.people import router as people_router
 from app.api.permissions import router as permissions_router
+from app.api.resources import router as resources_router
 from app.api.roles import router as roles_router
 from app.api.status import router as status_router
 from app.core.config import get_settings
@@ -48,7 +49,7 @@ async def lifespan(_application: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    application = FastAPI(title="FlyAccounts", version="6.0.0", lifespan=lifespan)
+    application = FastAPI(title="FlyAccounts", version="7.0.0", lifespan=lifespan)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     application.include_router(permissions_router, prefix="/v1")
     application.include_router(entities_router, prefix="/v1")
     application.include_router(clients_router, prefix="/v1")
+    application.include_router(resources_router, prefix="/v1")
     application.include_router(contracts_router, prefix="/v1")
     application.add_exception_handler(ApiError, api_error_handler)
     setup_telemetry(application)

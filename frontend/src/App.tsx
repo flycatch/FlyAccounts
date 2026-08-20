@@ -15,6 +15,7 @@ import { Step1UploadPage } from "./pages/contracts/create/Step1UploadPage";
 import { Step2ClosurePage } from "./pages/contracts/create/Step2ClosurePage";
 import { Step3PaymentPage } from "./pages/contracts/create/Step3PaymentPage";
 import { PendingAccessPage } from "./pages/PendingAccessPage";
+import { ResourcesPage } from "./pages/resources/ResourcesPage";
 import { SignInPage } from "./pages/SignInPage";
 import { PermissionsPage } from "./pages/settings/PermissionsPage";
 import { RolesPage } from "./pages/settings/RolesPage";
@@ -45,6 +46,8 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
   const canUsers = me.permissions.includes("manage_users");
   const canRoles = me.permissions.includes("manage_roles");
   const canPermissions = me.permissions.includes("manage_permissions");
+  const canClients = me.permissions.includes("manage_clients");
+  const canResources = me.permissions.includes("manage_resources");
   const canContracts = me.permissions.includes("manage_contracts");
   const showSettings = canUsers || canRoles || canPermissions;
 
@@ -57,6 +60,8 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
           canUsers={canUsers}
           canRoles={canRoles}
           canPermissions={canPermissions}
+          canClients={canClients}
+          canResources={canResources}
           canContracts={canContracts}
           onNavigate={(path) => navigate(path)}
           onSignOut={onSignOut}
@@ -66,8 +71,16 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
             <Route
               path="/clients"
               element={
-                <SettingsGate me={me} permission="manage_contracts">
+                <SettingsGate me={me} permission="manage_clients">
                   <ClientsPage />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/resources"
+              element={
+                <SettingsGate me={me} permission="manage_resources">
+                  <ResourcesPage />
                 </SettingsGate>
               }
             />

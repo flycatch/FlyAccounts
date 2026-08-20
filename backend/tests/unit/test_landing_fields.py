@@ -30,6 +30,8 @@ def test_system_admin_landing_lists_manage_permissions(db):
         "manage_users",
         "manage_roles",
         "manage_permissions",
+        "manage_clients",
+        "manage_resources",
         "manage_contracts",
         "view_contract_financials",
     }

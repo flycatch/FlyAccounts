@@ -35,6 +35,7 @@ frontend/build/
 logs/
 tmp/
 temp/
+figma/
 *.pid
 
 # Local data stores

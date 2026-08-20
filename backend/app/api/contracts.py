@@ -10,7 +10,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.deps import CurrentUser, require_delete_contracts, require_manage_contracts
+from app.core.deps import (
+    CurrentUser,
+    require_delete_contracts,
+    require_list_contracts,
+    require_manage_contracts,
+)
 from app.core.errors import (
     entity_context_required,
     invalid_currency,
@@ -134,7 +139,6 @@ def next_contract_reference(db: Session, entity_id: uuid.UUID) -> str:
     refs = db.scalars(
         select(Contract.reference).where(
             Contract.entity_id == entity_id,
-            Contract.deleted_at.is_(None),
         )
     ).all()
     max_n = 0
@@ -335,7 +339,7 @@ def list_contracts(
     status: str = "all",
     list_params: tuple[str | None, int, int] = Depends(list_query_deps),
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
-    current: CurrentUser = Depends(require_manage_contracts),
+    current: CurrentUser = Depends(require_list_contracts),
     db: Session = Depends(get_db),
 ) -> dict:
     search, page, page_size = list_params

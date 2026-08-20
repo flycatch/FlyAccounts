@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Contract, ContractResource, LegalEntity, User
-from tests.conftest import assign_role, auth_header, create_user, role_by_name
+from tests.conftest import assign_role, auth_header, create_role, create_user, role_by_name
 
 
 def _entity(db: Session, code: str) -> LegalEntity:
@@ -251,6 +251,28 @@ def test_delete_forbidden_without_financials(client, db: Session):
         headers={**auth_header(hr), "X-Entity-Id": str(entity_a.id)},
     )
     assert response.status_code == 403
+
+
+def test_list_contracts_allows_manage_resources_but_create_requires_manage_contracts(
+    client, db: Session
+):
+    resources_only = create_user(db, upn="resources@contoso.com")
+    assign_role(db, resources_only, create_role(db, "Resources Only", codes=["manage_resources"]))
+    entity_a = _entity(db, "entity_a")
+    _create_complete_contract(db, entity=entity_a, owner=resources_only, reference="CTR-RES1")
+    db.commit()
+    headers = {**auth_header(resources_only), "X-Entity-Id": str(entity_a.id)}
+
+    listed = client.get("/v1/contracts", headers=headers)
+    assert listed.status_code == 200
+    assert listed.json()["total"] == 1
+
+    created = client.post(
+        "/v1/contracts",
+        headers=headers,
+        json={"category": "time_and_material", "currency": "INR", "isAmendment": False},
+    )
+    assert created.status_code == 403
 
 
 def test_closure_owners_requires_manage_contracts(client, db: Session):

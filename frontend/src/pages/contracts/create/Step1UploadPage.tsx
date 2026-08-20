@@ -80,6 +80,12 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!contractId && selectedEntity?.allowedCurrencies && selectedEntity.allowedCurrencies.length > 0) {
+      setCurrency(selectedEntity.allowedCurrencies[0]);
+    }
+  }, [selectedEntity, contractId]);
+
+  useEffect(() => {
     if (!file) {
       setPreviewUrl(null);
       return;

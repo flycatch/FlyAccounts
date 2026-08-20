@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import CurrentUser, require_manage_contracts
+from app.core.deps import CurrentUser, require_manage_clients
 from app.core.errors import client_in_use, duplicate_client_name, not_found, validation_error
 from app.core.pagination import list_query_deps, paginate
 from app.db.session import get_db
@@ -82,7 +82,7 @@ def _assert_unique_name(db: Session, name: str, *, exclude_id: uuid.UUID | None 
 @router.get("/clients")
 def list_clients(
     list_params: tuple[str | None, int, int] = Depends(list_query_deps),
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_clients),
     db: Session = Depends(get_db),
 ) -> dict:
     search, page, page_size = list_params
@@ -111,7 +111,7 @@ def list_clients(
 @router.post("/clients", status_code=201)
 def create_client(
     body: CreateClientRequest,
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_clients),
     db: Session = Depends(get_db),
 ) -> dict:
     name = _require_nonempty(body.name, "name")
@@ -135,7 +135,7 @@ def create_client(
 @router.get("/clients/{client_id}")
 def get_client(
     client_id: uuid.UUID,
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_clients),
     db: Session = Depends(get_db),
 ) -> dict:
     client = db.get(Client, client_id)
@@ -148,7 +148,7 @@ def get_client(
 def update_client(
     client_id: uuid.UUID,
     body: UpdateClientRequest,
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_clients),
     db: Session = Depends(get_db),
 ) -> dict:
     client = db.get(Client, client_id)
@@ -180,7 +180,7 @@ def update_client(
 @router.delete("/clients/{client_id}", status_code=204)
 def delete_client(
     client_id: uuid.UUID,
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_clients),
     db: Session = Depends(get_db),
 ) -> Response:
     client = db.get(Client, client_id)

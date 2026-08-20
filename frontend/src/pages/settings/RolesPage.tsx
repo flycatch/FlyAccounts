@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import deleteIcon from "../../assets/icons/delete.svg";
 import editIcon from "../../assets/icons/edit.svg";
-import revokeIcon from "../../assets/icons/revoke.svg";
+import cancelIcon from "../../assets/icons/cancel.svg";
 import { apiClient } from "../../api/client";
 import type { components } from "../../api/schema";
 import { DetailPanel } from "../../components/DetailPanel";
@@ -222,6 +222,10 @@ export function RolesPage() {
                 <DetailPanel
                   title={selectedRole.name}
                   subtitle={editing ? undefined : selectedRole.description}
+                  onClose={() => {
+                    setSelectedRoleId(null);
+                    setEditing(false);
+                  }}
                   actions={
                     editing ? null : (
                       <>
@@ -246,75 +250,100 @@ export function RolesPage() {
                   }
                 >
                   {editing ? (
-                    <form
-                      className="settings-form settings-form-stack"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        void handleSave(selectedRole.id);
-                      }}
-                    >
-                      <TextField
-                        label="Role name"
-                        name="edit-role-name"
-                        value={editName}
-                        error={editForm.fieldError("editName")}
-                        onBlur={() => editForm.onBlur("editName", editName)}
-                        onChange={(event) => setEditName(event.target.value)}
-                      />
-                      <TextField
-                        label="Description"
-                        name="edit-role-description"
-                        value={editDescription}
-                        onChange={(event) => setEditDescription(event.target.value)}
-                      />
-                      <div className="settings-page-actions">
-                        <button type="button" className="settings-secondary" onClick={() => setEditing(false)}>
-                          Cancel
-                        </button>
-                        <button type="submit" className="settings-primary">
-                          Save role
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
                     <>
-                      <ul className="settings-detail-list">
-                        {selectedRole.permissions.map((permission) => (
-                          <li key={permission.id}>
-                            <span className="settings-detail-list-label">
-                              {permission.name} ({permission.permission})
-                            </span>
-                            <IconButton
-                              label={`Detach ${permission.name}`}
-                              icon={<img src={revokeIcon} alt="" />}
-                              onClick={() => void handleDetach(selectedRole.id, permission.id)}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="settings-form settings-form-stack">
-                        <SelectField
-                          label="Attach permission"
-                          name="attach-permission"
-                          value={attachPermissionId}
-                          onChange={(event) => setAttachPermissionId(event.target.value)}
-                        >
-                          <option value="">Select a permission</option>
-                          {permissions.map((permission) => (
-                            <option key={permission.id} value={permission.id}>
-                              {permission.name}
-                            </option>
+                      <form
+                        className="settings-form settings-form-stack"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void handleSave(selectedRole.id);
+                        }}
+                      >
+                        <TextField
+                          label="Role name"
+                          name="edit-role-name"
+                          value={editName}
+                          error={editForm.fieldError("editName")}
+                          onBlur={() => editForm.onBlur("editName", editName)}
+                          onChange={(event) => setEditName(event.target.value)}
+                        />
+                        <TextField
+                          label="Description"
+                          name="edit-role-description"
+                          value={editDescription}
+                          onChange={(event) => setEditDescription(event.target.value)}
+                        />
+                        <div className="settings-page-actions">
+                          <button
+                            type="button"
+                            className="settings-secondary"
+                            onClick={() => setEditing(false)}
+                          >
+                            Cancel
+                          </button>
+                          <button type="submit" className="settings-primary">
+                            Save role
+                          </button>
+                        </div>
+                      </form>
+                      <div
+                        style={{
+                          marginTop: "var(--space-5)",
+                          borderTop: "1px solid var(--color-stroke)",
+                          paddingTop: "var(--space-4)",
+                        }}
+                      >
+                        <p className="settings-subtitle">Permissions</p>
+                        <ul className="settings-detail-list">
+                          {selectedRole.permissions.map((permission) => (
+                            <li key={permission.id}>
+                              <span className="settings-detail-list-label">
+                                {permission.name} ({permission.permission})
+                              </span>
+                              <IconButton
+                                label={`Detach ${permission.name}`}
+                                icon={<img src={cancelIcon} alt="" />}
+                                onClick={() => void handleDetach(selectedRole.id, permission.id)}
+                              />
+                            </li>
                           ))}
-                        </SelectField>
-                        <button
-                          type="button"
-                          className="settings-primary"
-                          onClick={() => void handleAttach(selectedRole.id)}
+                        </ul>
+                        <div
+                          className="settings-form settings-form-stack"
+                          style={{ marginTop: "var(--space-4)" }}
                         >
-                          Attach permission
-                        </button>
+                          <SelectField
+                            label="Attach permission"
+                            name="attach-permission"
+                            value={attachPermissionId}
+                            onChange={(event) => setAttachPermissionId(event.target.value)}
+                          >
+                            <option value="">Select a permission</option>
+                            {permissions.map((permission) => (
+                              <option key={permission.id} value={permission.id}>
+                                {permission.name}
+                              </option>
+                            ))}
+                          </SelectField>
+                          <button
+                            type="button"
+                            className="settings-primary"
+                            onClick={() => void handleAttach(selectedRole.id)}
+                          >
+                            Attach permission
+                          </button>
+                        </div>
                       </div>
                     </>
+                  ) : (
+                    <ul className="settings-detail-list">
+                      {selectedRole.permissions.map((permission) => (
+                        <li key={permission.id}>
+                          <span className="settings-detail-list-label">
+                            {permission.name} ({permission.permission})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </DetailPanel>
               ) : null

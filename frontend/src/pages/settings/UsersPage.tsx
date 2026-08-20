@@ -238,6 +238,7 @@ export function UsersPage() {
                 <DetailPanel
                   title={selectedPerson.displayName ?? selectedPerson.email}
                   subtitle={selectedPerson.email}
+                  onClose={() => setSelectedPersonId(null)}
                   actions={
                     selectedPerson.personType === "invite" ? (
                       <IconButton

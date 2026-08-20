@@ -1,4 +1,4 @@
-"""Remove client_id from contracts table.
+"""Empty placeholder migration to preserve linear chain without file deletion.
 
 Revision ID: 0010_remove_contract_client
 Revises: 0009_clients
@@ -19,13 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_index("ix_contracts_client_id", table_name="contracts")
-    op.drop_column("contracts", "client_id")
+    pass
 
 
 def downgrade() -> None:
-    op.add_column(
-        "contracts",
-        sa.Column("client_id", sa.Uuid(), sa.ForeignKey("clients.id"), nullable=True),
-    )
-    op.create_index("ix_contracts_client_id", "contracts", ["client_id"])
+    pass

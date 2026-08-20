@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from tests.conftest import assign_role, auth_header, create_client, create_user, role_by_name
+from tests.conftest import assign_role, auth_header, create_client, create_role, create_user, role_by_name
 
 
 def _admin(db: Session):
@@ -73,11 +73,17 @@ def test_clients_crud_and_search_pagination(client, db: Session):
 
 
 
-def test_clients_require_manage_contracts(client, db: Session):
+def test_clients_require_manage_clients(client, db: Session):
     member = create_user(db, upn="member@contoso.com")
     assign_role(db, member, role_by_name(db, "Member"))
+    hr = create_user(db, upn="hr@contoso.com")
+    assign_role(db, hr, role_by_name(db, "Contracts HR"))
+    clients_only = create_user(db, upn="clients@contoso.com")
+    assign_role(db, clients_only, create_role(db, "Clients Only", codes=["manage_clients"]))
     db.commit()
     assert client.get("/v1/clients", headers=auth_header(member)).status_code == 403
+    assert client.get("/v1/clients", headers=auth_header(hr)).status_code == 403
+    assert client.get("/v1/clients", headers=auth_header(clients_only)).status_code == 200
 
 
 def test_people_and_roles_pagination(client, db: Session):

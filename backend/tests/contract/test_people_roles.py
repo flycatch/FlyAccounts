@@ -43,6 +43,8 @@ def test_people_and_roles_require_admin(client, db):
         "manage_users",
         "manage_roles",
         "manage_permissions",
+        "manage_clients",
+        "manage_resources",
         "manage_contracts",
         "view_contract_financials",
     }

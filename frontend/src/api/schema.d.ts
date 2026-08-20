@@ -398,13 +398,13 @@ export interface paths {
         };
         /**
          * List clients with search and pagination
-         * @description Requires manage_contracts. Global client master (not entity-scoped).
+         * @description Requires manage_clients. Global client master (not entity-scoped).
          */
         get: operations["listClients"];
         put?: never;
         /**
          * Create a client
-         * @description Requires manage_contracts. Name must be unique (case-insensitive).
+         * @description Requires manage_clients. Name must be unique (case-insensitive).
          */
         post: operations["createClient"];
         delete?: never;
@@ -435,6 +435,55 @@ export interface paths {
         patch: operations["updateClient"];
         trace?: never;
     };
+    "/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List resources with search, pagination, and sorting
+         * @description Requires manage_resources. Scoped by X-Entity-Id (* = all entities). Search matches name, contract reference, and resource type. Over-allocation (percent > 100) is allowed.
+         */
+        get: operations["listResources"];
+        put?: never;
+        /**
+         * Create a resource
+         * @description Requires manage_resources and a concrete X-Entity-Id. monthlyAllocationPercent has no upper cap.
+         */
+        post: operations["createResource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resources/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a resource */
+        get: operations["getResource"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a resource
+         * @description Requires manage_resources and a concrete X-Entity-Id.
+         */
+        delete: operations["deleteResource"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a resource
+         * @description Requires manage_resources and a concrete X-Entity-Id.
+         */
+        patch: operations["updateResource"];
+        trace?: never;
+    };
     "/contracts": {
         parameters: {
             query?: never;
@@ -444,7 +493,7 @@ export interface paths {
         };
         /**
          * List contracts scoped by X-Entity-Id
-         * @description Requires manage_contracts. Financial amount fields are omitted when the caller lacks view_contract_financials. Supports search (reference, closure owner, client name), status, and server-side pagination.
+         * @description Requires manage_contracts or manage_resources. Financial amount fields are omitted when the caller lacks view_contract_financials. Supports search (reference, closure owner, client name), status, and server-side pagination. Callers with only manage_resources may list for the resource contract picker; create/update/delete still require manage_contracts.
          */
         get: operations["listContracts"];
         put?: never;
@@ -913,6 +962,48 @@ export interface components {
             vatNumber?: string;
             notes?: string;
         };
+        Resource: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            resourceType: "inhouse" | "vendor" | "both";
+            name: string;
+            /** @description Monthly allocation percent. No upper cap; values greater than 100 indicate over-allocation. */
+            monthlyAllocationPercent: number;
+            /** Format: uuid */
+            contractId: string;
+            contractReference: string;
+            /** @description Calendar month as YYYY-MM. */
+            month: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ResourcesResponse: {
+            resources: components["schemas"]["Resource"][];
+            page: number;
+            /** @enum {integer} */
+            pageSize: 10 | 25 | 50;
+            total: number;
+        };
+        CreateResourceRequest: {
+            /** @enum {string} */
+            resourceType: "inhouse" | "vendor" | "both";
+            name: string;
+            /** @description No upper maximum; over-allocation is allowed. */
+            monthlyAllocationPercent: number;
+            /** Format: uuid */
+            contractId: string;
+            month: string;
+        };
+        UpdateResourceRequest: {
+            /** @enum {string} */
+            resourceType?: "inhouse" | "vendor" | "both";
+            name?: string;
+            monthlyAllocationPercent?: number;
+            /** Format: uuid */
+            contractId?: string;
+            month?: string;
+        };
     };
     responses: never;
     parameters: {
@@ -928,7 +1019,12 @@ export interface components {
         ListPage: number;
         /** @description Page size. */
         ListPageSize: 10 | 25 | 50;
+        /** @description Column to sort by. Defaults to name for resources. */
+        ListSortBy: "resourceType" | "name" | "monthlyAllocationPercent" | "contract" | "month";
+        /** @description Sort direction. */
+        ListSortOrder: "asc" | "desc";
         ClientId: string;
+        ResourceId: string;
     };
     requestBodies: never;
     headers: never;
@@ -2296,6 +2392,288 @@ export interface operations {
             };
             /** @description Error */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listResources: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive search across relevant text fields. */
+                search?: components["parameters"]["ListSearch"];
+                /** @description 1-based page index. */
+                page?: components["parameters"]["ListPage"];
+                /** @description Page size. */
+                pageSize?: components["parameters"]["ListPageSize"];
+                /** @description Column to sort by. Defaults to name for resources. */
+                sortBy?: components["parameters"]["ListSortBy"];
+                /** @description Sort direction. */
+                sortOrder?: components["parameters"]["ListSortOrder"];
+            };
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated resources. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResourcesResponse"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createResource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateResourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Resource created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden or All Entities create rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Contract not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getResource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                resourceId: components["parameters"]["ResourceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resource. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteResource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                resourceId: components["parameters"]["ResourceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden or All Entities delete rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateResource: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                resourceId: components["parameters"]["ResourceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated resource. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Resource"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden or All Entities update rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
