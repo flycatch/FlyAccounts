@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { IconButton } from "../../components/IconButton";
+import editIcon from "../../assets/icons/edit.svg";
+import deleteIcon from "../../assets/icons/delete.svg";
 import type { components } from "../../api/schema";
 import { apiClient } from "../../api/client";
 import { Modal } from "../../components/Modal";
@@ -223,11 +226,19 @@ export function ContractsPage({ me }: ContractsPageProps) {
                         )}
                       </td>
                       <td className="contracts-actions">
-                        <button type="button" onClick={() => navigate(`/contracts/${contract.id}`)}>
-                          View
-                        </button>
-                        <button
-                          type="button"
+                        <IconButton
+                          label="View contract"
+                          icon={
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          }
+                          onClick={() => navigate(`/contracts/${contract.id}`)}
+                        />
+                        <IconButton
+                          label="Edit contract"
+                          icon={<img src={editIcon} alt="" />}
                           onClick={() =>
                             navigate(
                               contract.isDraft
@@ -235,29 +246,21 @@ export function ContractsPage({ me }: ContractsPageProps) {
                                 : `/contracts/${contract.id}/edit`,
                             )
                           }
-                        >
-                          Edit
-                        </button>
-                        {canDelete ? (
-                          <button
-                            type="button"
-                            disabled={isAllEntities}
-                            title={
-                              isAllEntities ? "Select a single entity to delete" : undefined
-                            }
-                            onClick={() => setDeleting(contract)}
-                          >
-                            Delete
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled
-                            title="Delete requires Finance permissions"
-                          >
-                            Delete
-                          </button>
-                        )}
+                        />
+                        <IconButton
+                          label="Delete contract"
+                          disabled={isAllEntities || !canDelete}
+                          title={
+                            isAllEntities
+                              ? "Select a single entity to delete"
+                              : !canDelete
+                              ? "Delete requires Finance permissions"
+                              : undefined
+                          }
+                          icon={<img src={deleteIcon} alt="" />}
+                          danger
+                          onClick={() => setDeleting(contract)}
+                        />
                       </td>
                     </tr>
                   ))

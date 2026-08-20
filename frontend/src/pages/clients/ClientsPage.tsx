@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { components } from "../../api/schema";
 import { apiClient } from "../../api/client";
+import { IconButton } from "../../components/IconButton";
+import editIcon from "../../assets/icons/edit.svg";
+import deleteIcon from "../../assets/icons/delete.svg";
 import { Modal } from "../../components/Modal";
 import { PaginationBar } from "../../components/PaginationBar";
 import { TextField } from "../../components/TextField";
@@ -248,15 +251,27 @@ export function ClientsPage() {
                       <td>{item.contactPhone}</td>
                       <td>{item.vatNumber}</td>
                       <td className="contracts-actions">
-                        <button type="button" onClick={() => openView(item)}>
-                          View
-                        </button>
-                        <button type="button" onClick={() => openEdit(item)}>
-                          Edit
-                        </button>
-                        <button type="button" onClick={() => openDelete(item)}>
-                          Delete
-                        </button>
+                        <IconButton
+                          label="View client"
+                          icon={
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          }
+                          onClick={() => openView(item)}
+                        />
+                        <IconButton
+                          label="Edit client"
+                          icon={<img src={editIcon} alt="" />}
+                          onClick={() => openEdit(item)}
+                        />
+                        <IconButton
+                          label="Delete client"
+                          icon={<img src={deleteIcon} alt="" />}
+                          danger
+                          onClick={() => openDelete(item)}
+                        />
                       </td>
                     </tr>
                   ))

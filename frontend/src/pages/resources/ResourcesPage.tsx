@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { components } from "../../api/schema";
 import { apiClient } from "../../api/client";
+import { IconButton } from "../../components/IconButton";
+import editIcon from "../../assets/icons/edit.svg";
+import deleteIcon from "../../assets/icons/delete.svg";
 import { Modal } from "../../components/Modal";
 import { PaginationBar } from "../../components/PaginationBar";
 import { PillToggle } from "../../components/PillToggle";
@@ -378,23 +381,31 @@ export function ResourcesPage() {
                       <td>{item.contractReference}</td>
                       <td>{item.month}</td>
                       <td className="contracts-actions">
-                        <button type="button" onClick={() => openView(item)}>
-                          View
-                        </button>
-                        <button
-                          type="button"
+                        <IconButton
+                          label="View resource"
+                          icon={
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          }
+                          onClick={() => openView(item)}
+                        />
+                        <IconButton
+                          label="Edit resource"
                           disabled={isAllEntities}
+                          title={isAllEntities ? "Select a single entity to edit" : undefined}
+                          icon={<img src={editIcon} alt="" />}
                           onClick={() => openEdit(item)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
+                        />
+                        <IconButton
+                          label="Delete resource"
                           disabled={isAllEntities}
+                          title={isAllEntities ? "Select a single entity to delete" : undefined}
+                          icon={<img src={deleteIcon} alt="" />}
+                          danger
                           onClick={() => openDelete(item)}
-                        >
-                          Delete
-                        </button>
+                        />
                       </td>
                     </tr>
                   ))

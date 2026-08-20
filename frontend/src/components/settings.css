@@ -66,7 +66,7 @@
 
 .settings-form label:not(.ui-field) {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--space-2);
   font-family: var(--font-display);
   font-weight: var(--font-weight-medium);
@@ -180,6 +180,7 @@
 
 .settings-role-option {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: var(--space-2);
   font-family: var(--font-body);
@@ -270,4 +271,20 @@
   .settings-permission-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.settings-role-multiselect {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.settings-role-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
 }
