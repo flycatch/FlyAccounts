@@ -21,7 +21,7 @@
 
 ### User Story 1 - Manage clients in modals (Priority: P1)
 
-A person with `manage_contracts` opens Clients from the sidebar and creates, views, edits, or deletes clients using modals. Fields are Name, Address, Contact Person, Contact Email, Contact Phone, VAT/Tax Registration Number, and optional Notes.
+A person with `manage_clients` opens Clients from the sidebar and creates, views, edits, or deletes clients using modals. Fields are Name, Address, Contact Person, Contact Email, Contact Phone, VAT/Tax Registration Number, and optional Notes.
 
 **Why this priority**: Contracts need a reusable counterparty master; without it, client data cannot be shared across contracts.
 
@@ -29,7 +29,7 @@ A person with `manage_contracts` opens Clients from the sidebar and creates, vie
 
 **Acceptance Scenarios**:
 
-1. **Given** a person with `manage_contracts`, **When** they open Clients and create a valid client, **Then** the client appears in the list and a success toast is shown.
+1. **Given** a person with `manage_clients`, **When** they open Clients and create a valid client, **Then** the client appears in the list and a success toast is shown.
 2. **Given** a client exists, **When** they open View or Edit, **Then** all fields are shown; Edit saves changes and shows a success toast.
 3. **Given** a client is not linked to any non-deleted contract, **When** they delete it, **Then** the client is removed and a success toast is shown.
 4. **Given** a client is linked to one or more non-deleted contracts, **When** they try to delete it, **Then** deletion is refused with a clear dependency error toast (`client_in_use`).
@@ -90,14 +90,14 @@ Successful create/update/delete and other user-triggered mutations (assign, revo
 
 ## Non-goals
 
-- Entity-scoped clients or a separate `manage_clients` permission
+- Entity-scoped clients
 - Permissions catalog pagination
 - Changing `GET /contracts/closure-owners` pagination
 - Full Speckit 006 artifact set (plan, research, data-model, tasks, openapi copy)
 
 ## Functional Requirements
 
-- **FR-001**: System MUST provide global Client CRUD via `/clients` gated by `manage_contracts`.
+- **FR-001**: System MUST provide global Client CRUD via `/clients` gated by `manage_clients`.
 - **FR-002**: Client create/update MUST require Name, Address, Contact Person, Contact Email, Contact Phone, and VAT; Notes optional; email format validated.
 - **FR-003**: Deleting a client linked to non-deleted contracts MUST fail with `client_in_use`.
 - **FR-004**: [DELETED] (Contracts no longer reference clients).

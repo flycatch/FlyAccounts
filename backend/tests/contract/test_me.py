@@ -56,6 +56,8 @@ def test_me_system_admin_has_manage_permissions(client, db):
         "manage_users",
         "manage_roles",
         "manage_permissions",
+        "manage_clients",
+        "manage_resources",
         "manage_contracts",
         "view_contract_financials",
     }

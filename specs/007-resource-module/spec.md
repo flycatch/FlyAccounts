@@ -21,7 +21,7 @@
 
 ### User Story 1 - Manage resources in modals (Priority: P1)
 
-A person with `manage_contracts` opens Resources from the sidebar and creates, views, edits, or deletes resources using modals. Fields are Resource Type (Inhouse / Vendor / Both), Resource Name, Monthly Allocation %, Contract (searchable), and Month (YYYY-MM).
+A person with `manage_resources` opens Resources from the sidebar and creates, views, edits, or deletes resources using modals. Fields are Resource Type (Inhouse / Vendor / Both), Resource Name, Monthly Allocation %, Contract (searchable), and Month (YYYY-MM).
 
 **Why this priority**: Resources track monthly allocation against contracts per entity; without CRUD, allocation cannot be maintained.
 
@@ -29,7 +29,7 @@ A person with `manage_contracts` opens Resources from the sidebar and creates, v
 
 **Acceptance Scenarios**:
 
-1. **Given** a person with `manage_contracts` and a single entity selected, **When** they create a valid resource, **Then** it appears in the list and a success toast is shown.
+1. **Given** a person with `manage_resources` and a single entity selected, **When** they create a valid resource, **Then** it appears in the list and a success toast is shown.
 2. **Given** a resource exists, **When** they open View or Edit, **Then** all fields are shown; Edit saves and shows a success toast.
 3. **Given** a resource exists, **When** they delete it, **Then** it is removed and a success toast is shown.
 4. **Given** All Entities is selected, **When** they try to Add, **Then** Add is disabled and the API refuses create with `entity_context_required`.
@@ -99,11 +99,10 @@ Successful create/update/delete show a success toast. Failed API operations show
 - Sorting on Clients, Contracts, Users, or Roles lists
 - Linking Resources to contract-wizard `ContractResource` rows
 - Changing the create-contract wizard
-- Separate `manage_resources` permission (reuse `manage_contracts`)
 
 ## Functional Requirements
 
-- **FR-001**: System MUST provide entity-scoped Resource CRUD via `/resources` gated by `manage_contracts`.
+- **FR-001**: System MUST provide entity-scoped Resource CRUD via `/resources` gated by `manage_resources`. Resource managers MAY list contracts via `GET /contracts` for the contract picker without `manage_contracts`; contract create/update/delete still require `manage_contracts`.
 - **FR-002**: Resource create/update MUST require resourceType (`inhouse`|`vendor`|`both`), name, monthlyAllocationPercent (number, no maximum), contractId, and month (`YYYY-MM`).
 - **FR-003**: List and mutations MUST respect `X-Entity-Id`; create/update/delete require a concrete entity UUID.
 - **FR-004**: `GET /resources` MUST support `search`, `page`, `pageSize`, `sortBy`, and `sortOrder` with `total` in the response.

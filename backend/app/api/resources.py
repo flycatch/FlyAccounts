@@ -10,7 +10,7 @@ from sqlalchemy import asc, desc, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.contracts import parse_entity_header, require_single_entity
-from app.core.deps import CurrentUser, require_manage_contracts
+from app.core.deps import CurrentUser, require_manage_resources
 from app.core.errors import not_found, validation_error
 from app.core.pagination import paginate, sortable_list_query_deps
 from app.db.session import get_db
@@ -125,7 +125,7 @@ def _get_resource_for_entity(
 def list_resources(
     list_params: tuple[str | None, int, int, str, str] = Depends(sortable_list_query_deps),
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_resources),
     db: Session = Depends(get_db),
 ) -> dict:
     search, page, page_size, sort_by, sort_order = list_params
@@ -166,7 +166,7 @@ def list_resources(
 def create_resource(
     body: CreateResourceRequest,
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_resources),
     db: Session = Depends(get_db),
 ) -> dict:
     entity_id = require_single_entity(x_entity_id)
@@ -192,7 +192,7 @@ def create_resource(
 def get_resource(
     resource_id: uuid.UUID,
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_resources),
     db: Session = Depends(get_db),
 ) -> dict:
     entity_id = parse_entity_header(x_entity_id)
@@ -205,7 +205,7 @@ def update_resource(
     resource_id: uuid.UUID,
     body: UpdateResourceRequest,
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_resources),
     db: Session = Depends(get_db),
 ) -> dict:
     entity_id = require_single_entity(x_entity_id)
@@ -233,7 +233,7 @@ def update_resource(
 def delete_resource(
     resource_id: uuid.UUID,
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
-    _current: CurrentUser = Depends(require_manage_contracts),
+    _current: CurrentUser = Depends(require_manage_resources),
     db: Session = Depends(get_db),
 ) -> Response:
     entity_id = require_single_entity(x_entity_id)

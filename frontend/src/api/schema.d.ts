@@ -398,13 +398,13 @@ export interface paths {
         };
         /**
          * List clients with search and pagination
-         * @description Requires manage_contracts. Global client master (not entity-scoped).
+         * @description Requires manage_clients. Global client master (not entity-scoped).
          */
         get: operations["listClients"];
         put?: never;
         /**
          * Create a client
-         * @description Requires manage_contracts. Name must be unique (case-insensitive).
+         * @description Requires manage_clients. Name must be unique (case-insensitive).
          */
         post: operations["createClient"];
         delete?: never;
@@ -444,13 +444,13 @@ export interface paths {
         };
         /**
          * List resources with search, pagination, and sorting
-         * @description Requires manage_contracts. Scoped by X-Entity-Id (* = all entities). Search matches name, contract reference, and resource type. Over-allocation (percent > 100) is allowed.
+         * @description Requires manage_resources. Scoped by X-Entity-Id (* = all entities). Search matches name, contract reference, and resource type. Over-allocation (percent > 100) is allowed.
          */
         get: operations["listResources"];
         put?: never;
         /**
          * Create a resource
-         * @description Requires manage_contracts and a concrete X-Entity-Id. monthlyAllocationPercent has no upper cap.
+         * @description Requires manage_resources and a concrete X-Entity-Id. monthlyAllocationPercent has no upper cap.
          */
         post: operations["createResource"];
         delete?: never;
@@ -472,14 +472,14 @@ export interface paths {
         post?: never;
         /**
          * Delete a resource
-         * @description Requires manage_contracts and a concrete X-Entity-Id.
+         * @description Requires manage_resources and a concrete X-Entity-Id.
          */
         delete: operations["deleteResource"];
         options?: never;
         head?: never;
         /**
          * Update a resource
-         * @description Requires manage_contracts and a concrete X-Entity-Id.
+         * @description Requires manage_resources and a concrete X-Entity-Id.
          */
         patch: operations["updateResource"];
         trace?: never;
@@ -493,7 +493,7 @@ export interface paths {
         };
         /**
          * List contracts scoped by X-Entity-Id
-         * @description Requires manage_contracts. Financial amount fields are omitted when the caller lacks view_contract_financials. Supports search (reference, closure owner, client name), status, and server-side pagination.
+         * @description Requires manage_contracts or manage_resources. Financial amount fields are omitted when the caller lacks view_contract_financials. Supports search (reference, closure owner, client name), status, and server-side pagination. Callers with only manage_resources may list for the resource contract picker; create/update/delete still require manage_contracts.
          */
         get: operations["listContracts"];
         put?: never;

@@ -46,6 +46,8 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
   const canUsers = me.permissions.includes("manage_users");
   const canRoles = me.permissions.includes("manage_roles");
   const canPermissions = me.permissions.includes("manage_permissions");
+  const canClients = me.permissions.includes("manage_clients");
+  const canResources = me.permissions.includes("manage_resources");
   const canContracts = me.permissions.includes("manage_contracts");
   const showSettings = canUsers || canRoles || canPermissions;
 
@@ -58,6 +60,8 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
           canUsers={canUsers}
           canRoles={canRoles}
           canPermissions={canPermissions}
+          canClients={canClients}
+          canResources={canResources}
           canContracts={canContracts}
           onNavigate={(path) => navigate(path)}
           onSignOut={onSignOut}
@@ -67,7 +71,7 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
             <Route
               path="/clients"
               element={
-                <SettingsGate me={me} permission="manage_contracts">
+                <SettingsGate me={me} permission="manage_clients">
                   <ClientsPage />
                 </SettingsGate>
               }
@@ -75,7 +79,7 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
             <Route
               path="/resources"
               element={
-                <SettingsGate me={me} permission="manage_contracts">
+                <SettingsGate me={me} permission="manage_resources">
                   <ResourcesPage />
                 </SettingsGate>
               }

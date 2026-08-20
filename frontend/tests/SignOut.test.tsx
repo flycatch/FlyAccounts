@@ -60,6 +60,8 @@ describe("sign out", () => {
           canUsers={false}
           canRoles={false}
           canPermissions={false}
+          canClients={false}
+          canResources={false}
           canContracts={false}
           onNavigate={() => undefined}
           onSignOut={() => {

@@ -60,6 +60,20 @@ PERMISSION_SEED = [
         "Open Settings → Permissions and view the permission catalog.",
     ),
     (
+        "manage_clients",
+        "Manage clients",
+        "clients",
+        None,
+        "Open Clients and create, view, edit, or delete clients.",
+    ),
+    (
+        "manage_resources",
+        "Manage resources",
+        "resources",
+        None,
+        "Open Resources and create, view, edit, or delete resources.",
+    ),
+    (
         "manage_contracts",
         "Manage contracts",
         "contracts",
@@ -78,8 +92,16 @@ PERMISSION_SEED = [
 ROLE_SEED = [
     (
         "System Admin",
-        "Manage users, roles, permissions, and contracts",
-        ["manage_users", "manage_roles", "manage_permissions", "manage_contracts", "view_contract_financials"],
+        "Manage users, roles, permissions, clients, resources, and contracts",
+        [
+            "manage_users",
+            "manage_roles",
+            "manage_permissions",
+            "manage_clients",
+            "manage_resources",
+            "manage_contracts",
+            "view_contract_financials",
+        ],
     ),
     ("Member", "General member with no settings permissions", []),
     ("Operator", "Operator with no settings permissions", []),

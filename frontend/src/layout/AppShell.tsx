@@ -36,6 +36,8 @@ type AppShellProps = {
   canUsers: boolean;
   canRoles: boolean;
   canPermissions: boolean;
+  canClients: boolean;
+  canResources: boolean;
   canContracts: boolean;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
@@ -48,6 +50,8 @@ export function AppShell({
   canUsers,
   canRoles,
   canPermissions,
+  canClients,
+  canResources,
   canContracts,
   onNavigate,
   onSignOut,
@@ -77,6 +81,8 @@ export function AppShell({
         canUsers={canUsers}
         canRoles={canRoles}
         canPermissions={canPermissions}
+        canClients={canClients}
+        canResources={canResources}
         canContracts={canContracts}
         open={open}
         onNavigate={navigate}

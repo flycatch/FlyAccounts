@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Contract, LegalEntity, Resource, User
-from tests.conftest import assign_role, auth_header, create_user, role_by_name
+from tests.conftest import assign_role, auth_header, create_role, create_user, role_by_name
 
 
 def _entity(db: Session, code: str) -> LegalEntity:
@@ -124,11 +124,17 @@ def test_resources_require_single_entity_for_create(client, db: Session):
     assert response.json()["code"] == "entity_context_required"
 
 
-def test_resources_require_manage_contracts(client, db: Session):
+def test_resources_require_manage_resources(client, db: Session):
     member = create_user(db, upn="member@contoso.com")
     assign_role(db, member, role_by_name(db, "Member"))
+    hr = create_user(db, upn="hr@contoso.com")
+    assign_role(db, hr, role_by_name(db, "Contracts HR"))
+    resources_only = create_user(db, upn="resources@contoso.com")
+    assign_role(db, resources_only, create_role(db, "Resources Only", codes=["manage_resources"]))
     db.commit()
     assert client.get("/v1/resources", headers=auth_header(member)).status_code == 403
+    assert client.get("/v1/resources", headers=auth_header(hr)).status_code == 403
+    assert client.get("/v1/resources", headers=auth_header(resources_only)).status_code == 200
 
 
 def test_resources_search_pagination_and_sort(client, db: Session):
