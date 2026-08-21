@@ -32,6 +32,9 @@ class Contract(Base):
     closure_owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("clients.id"), nullable=True, index=True
+    )
     start_date: Mapped[date | None] = mapped_column(Date(), nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date(), nullable=True)
     project_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -59,6 +62,7 @@ class Contract(Base):
         remote_side=[id],
     )
     closure_owner: Mapped["User | None"] = relationship(foreign_keys=[closure_owner_user_id])
+    client: Mapped["Client | None"] = relationship(foreign_keys=[client_id], back_populates="contracts")
     created_by: Mapped["User"] = relationship(foreign_keys=[created_by_user_id])
     milestones: Mapped[list["ContractMilestone"]] = relationship(
         back_populates="contract", cascade="all, delete-orphan"

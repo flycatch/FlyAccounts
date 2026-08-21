@@ -26,7 +26,7 @@ from app.core.errors import (
 from app.core.pagination import list_query_deps, paginate
 from app.core.permissions import VIEW_CONTRACT_FINANCIALS
 from app.db.session import get_db
-from app.models import Contract, ContractMilestone, ContractResource, LegalEntity, User
+from app.models import Client, Contract, ContractMilestone, ContractResource, LegalEntity, User
 from app.storage.s3 import upload_bytes
 
 router = APIRouter()
@@ -64,6 +64,7 @@ class ResourceIn(BaseModel):
 class CreateContractRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
     client_file_key: str = Field(alias="clientFileKey")
+    client_id: uuid.UUID = Field(alias="clientId")
     is_amendment: bool = Field(alias="isAmendment")
     parent_contract_id: uuid.UUID | None = Field(default=None, alias="parentContractId")
     category: str
@@ -78,6 +79,7 @@ class UpdateContractRequest(BaseModel):
     category: str | None = None
     currency: str | None = None
     client_file_key: str | None = Field(default=None, alias="clientFileKey")
+    client_id: uuid.UUID | None = Field(default=None, alias="clientId")
     client_file_name: str | None = Field(default=None, alias="clientFileName")
     client_file_content_type: str | None = Field(default=None, alias="clientFileContentType")
     client_file_size_bytes: int | None = Field(default=None, alias="clientFileSizeBytes")
@@ -96,6 +98,13 @@ class UpdateContractRequest(BaseModel):
     resource_type: str | None = Field(default=None, alias="resourceType")
     resource: ResourceIn | None = None
     complete: bool | None = None
+
+
+def _require_client(db: Session, client_id: uuid.UUID) -> Client:
+    client = db.get(Client, client_id)
+    if client is None:
+        raise validation_error("Client was not found.")
+    return client
 
 
 def parse_entity_header(x_entity_id: str | None) -> uuid.UUID | None:
@@ -202,6 +211,9 @@ def contract_payload(contract: Contract, *, can_view_financials: bool, detail: b
         payload["parentContractId"] = str(contract.parent_contract_id)
         if contract.parent is not None:
             payload["parentContractReference"] = contract.parent.reference
+    if contract.client_id:
+        payload["clientId"] = str(contract.client_id)
+        payload["clientName"] = contract.client.name if contract.client else ""
     if contract.closure_owner_user_id:
         payload["closureOwnerUserId"] = str(contract.closure_owner_user_id)
         payload["closureOwnerName"] = (
@@ -259,6 +271,7 @@ def load_contract(db: Session, contract_id: uuid.UUID) -> Contract | None:
         .options(
             selectinload(Contract.entity),
             selectinload(Contract.parent),
+            selectinload(Contract.client),
             selectinload(Contract.closure_owner),
             selectinload(Contract.milestones),
             selectinload(Contract.resources),
@@ -347,6 +360,7 @@ def list_contracts(
     query = select(Contract).options(
         selectinload(Contract.entity),
         selectinload(Contract.parent),
+        selectinload(Contract.client),
         selectinload(Contract.closure_owner),
     ).where(Contract.deleted_at.is_(None))
     if entity_id is not None:
@@ -357,10 +371,12 @@ def list_contracts(
         term = f"%{search.strip()}%"
         query = (
             query.outerjoin(User, User.id == Contract.closure_owner_user_id)
+            .outerjoin(Client, Client.id == Contract.client_id)
             .where(
                 or_(
                     Contract.reference.ilike(term),
                     User.display_name.ilike(term),
+                    Client.name.ilike(term),
                 )
             )
             .distinct()
@@ -427,7 +443,7 @@ def create_contract(
     if not body.client_file_key.strip():
         raise validation_error("Client contract file is required.")
 
-
+    client = _require_client(db, body.client_id)
 
     if body.is_amendment:
         if body.parent_contract_id is None:
@@ -447,6 +463,7 @@ def create_contract(
         is_amendment=body.is_amendment,
         is_draft=True,
         parent_contract_id=body.parent_contract_id if body.is_amendment else None,
+        client_id=client.id,
         client_file_key=body.client_file_key.strip(),
         client_file_name=body.client_file_name,
         client_file_content_type=body.client_file_content_type,
@@ -497,6 +514,9 @@ def update_contract(
         contract.client_file_content_type = body.client_file_content_type
     if body.client_file_size_bytes is not None:
         contract.client_file_size_bytes = body.client_file_size_bytes
+    if body.client_id is not None:
+        client = _require_client(db, body.client_id)
+        contract.client_id = client.id
     if body.is_amendment is not None:
         contract.is_amendment = body.is_amendment
         if not body.is_amendment:
@@ -583,6 +603,8 @@ def update_contract(
 
     if body.complete:
         missing: list[str] = []
+        if not contract.client_id:
+            missing.append("clientId")
         if not contract.closure_owner_user_id:
             missing.append("closureOwnerUserId")
         if not contract.start_date or not contract.end_date:

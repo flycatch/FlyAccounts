@@ -12,13 +12,22 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, require_manage_users
 from app.core.errors import (
+    ApiError,
     already_present,
     duplicate_assignment,
     duplicate_invite,
     last_admin_required,
     not_found,
 )
-from app.core.invites import attach_invite_roles, find_active_invite, find_user_by_email
+from app.core.invites import (
+    attach_invite_roles,
+    build_invite_url,
+    find_active_invite,
+    find_user_by_email,
+    generate_invite_token,
+    hash_invite_token,
+    send_invite_email,
+)
 from app.core.pagination import list_query_deps
 from app.core.permissions import load_assigned_roles, would_remove_last_admin, would_remove_person_leave_last_admin
 from app.core.security import revoke_refresh_tokens_for_user
@@ -134,9 +143,19 @@ def create_invite(
         invited_by_user_id=current.user.id,
         created_at=datetime.now(timezone.utc),
     )
+    raw_token = generate_invite_token()
+    invite.token_hash = hash_invite_token(raw_token)
     db.add(invite)
     db.flush()
     attach_invite_roles(db, invite, roles)
+
+    invite_url = build_invite_url(raw_token)
+    try:
+        send_invite_email(to=email, invite_url=invite_url)
+    except ApiError:
+        db.rollback()
+        raise
+
     loaded = find_active_invite(db, email)
     assert loaded is not None
     return _invite_payload(db, loaded)

@@ -56,9 +56,9 @@ Permissions is a read-only catalog. The API returns permissions grouped by modul
 
 ---
 
-### User Story 5 - Invite without email (Priority: P2)
+### User Story 5 - Invite with email (Priority: P2)
 
-Invite User still creates an unused invite (optional roles). No email is sent. The invited person must know to sign in with the matching organizational Microsoft account.
+Invite User creates an unused invite (optional roles) and sends an invitation email with a frontend invite URL. The invited person signs in with the matching organizational Microsoft account.
 
 ## Requirements
 
@@ -71,15 +71,15 @@ Invite User still creates an unused invite (optional roles). No email is sent. T
 - **FR-005**: Assign-role requests MUST accept `roleIds` (one or more) for a path-scoped person or invite.
 - **FR-006**: Users page MUST NOT offer a global Assign Roles control; assignment is detail-scoped with multi-select.
 - **FR-007**: Page-level primary actions MUST be right-aligned.
-- **FR-008**: Invite MUST NOT send outbound email in this feature.
+- **FR-008**: Invite MUST send an invitation email via backend SMTP; on send failure the invite MUST NOT be recorded and a generic error MUST be returned without credentials or internal SMTP details.
 - **FR-009**: `INITIAL_ADMIN_EMAIL` bootstrap MUST assign System Admin when the signer lacks `manage_users`.
 - **FR-010**: Last-admin rules MUST key off `manage_users`.
 
 ### Non-goals
 
-- Outbound invitation email / mail service
 - Creating or editing permission types in the UI
 - Re-seeding Finance/HR/PMO landing permissions in this feature
+- Frontend-side email sending (mail remains backend-only)
 
 ## Success Criteria
 

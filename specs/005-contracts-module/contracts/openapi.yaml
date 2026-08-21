@@ -507,10 +507,12 @@ paths:
     post:
       operationId: createInvite
       summary: Invite a person by organizational work email
-      description: 'Requires manage_users. Creates an unused invite with zero or more existing roles.
-        The invited person cannot use the application until they sign in. Duplicate active invite of the
-        same email is refused. Invite of an email that already belongs to a listed User is refused. Sending
-        email is not part of this operation.
+      description: 'Requires manage_users. Creates an unused invite with zero or more existing roles,
+        generates an invite token, and sends an invitation email with a frontend invite URL. The invited
+        person cannot use the application until they sign in. The raw invite token is never returned in
+        the response. Duplicate active invite of the same email is refused. Invite of an email that already
+        belongs to a listed User is refused. If the invitation email cannot be sent, the invite is not
+        recorded and a generic error is returned without SMTP credentials or internal details.
 
         '
       tags:
@@ -525,7 +527,7 @@ paths:
               $ref: '#/components/schemas/CreateInviteRequest'
       responses:
         '201':
-          description: Invite recorded.
+          description: Invite recorded and invitation email sent.
           content:
             application/json:
               schema:
@@ -563,6 +565,15 @@ paths:
                   value:
                     code: already_present
                     message: That person is already listed.
+        '502':
+          description: Invitation email could not be sent; invite was not recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: invite_email_failed
+                message: The invitation email could not be sent.
   /people/invites/{inviteId}:
     delete:
       operationId: cancelInvite
@@ -1721,6 +1732,7 @@ components:
           - invalid_file_type
           - client_in_use
           - duplicate_client_name
+          - invite_email_failed
         message:
           type: string
     MicrosoftTokenRequest:
@@ -2231,6 +2243,13 @@ components:
           format: uuid
         parentContractReference:
           type: string
+        clientId:
+          type: string
+          format: uuid
+          description: Omitted when unset (legacy rows).
+        clientName:
+          type: string
+          description: Denormalized client name; omitted when clientId is unset.
         closureOwnerUserId:
           type: string
           format: uuid
@@ -2322,12 +2341,17 @@ components:
       additionalProperties: false
       required:
       - clientFileKey
+      - clientId
       - isAmendment
       - category
       - currency
       properties:
         clientFileKey:
           type: string
+        clientId:
+          type: string
+          format: uuid
+          description: Required. References an existing global Client.
         isAmendment:
           type: boolean
         parentContractId:
@@ -2389,6 +2413,10 @@ components:
           - SAR
         clientFileKey:
           type: string
+        clientId:
+          type: string
+          format: uuid
+          description: When set, must reference an existing global Client. Required to complete a draft.
         clientFileName:
           type: string
         clientFileContentType:
@@ -2490,6 +2518,13 @@ components:
           format: uuid
         parentContractReference:
           type: string
+        clientId:
+          type: string
+          format: uuid
+          description: Omitted when unset (legacy rows).
+        clientName:
+          type: string
+          description: Denormalized client name; omitted when clientId is unset.
         closureOwnerUserId:
           type: string
           format: uuid

@@ -13,6 +13,7 @@ import { ContractCreateLayout } from "./ContractCreateLayout";
 type MeResponse = components["schemas"]["MeResponse"];
 type ContractSummary = components["schemas"]["ContractSummary"];
 type ContractDetail = components["schemas"]["ContractDetail"];
+type Client = components["schemas"]["Client"];
 
 const CATEGORIES = [
   { value: "time_and_material", label: "Time & Material" },
@@ -55,10 +56,11 @@ type Step1UploadPageProps = {
   me: MeResponse;
 };
 
-export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
+export function Step1UploadPage({ me }: Step1UploadPageProps) {
   const navigate = useNavigate();
   const { contractId = "" } = useParams();
   const { isAllEntities, selectedEntity, entityHeaderValue } = useEntityContext();
+  const canLookupClients = me.permissions.includes("manage_clients");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -71,6 +73,10 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
 
   const [existingContracts, setExistingContracts] = useState<ContractSummary[]>([]);
   const [parentSearch, setParentSearch] = useState("");
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientId, setClientId] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientError, setClientError] = useState<string | undefined>();
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]["value"]>("time_and_material");
   const [currency, setCurrency] = useState<string>(selectedEntity?.allowedCurrencies[0] ?? "USD");
   const [currencyError, setCurrencyError] = useState<string | undefined>();
@@ -136,6 +142,25 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
     }
   }
 
+  async function loadClients(search = "") {
+    if (!canLookupClients) {
+      setClients([]);
+      return;
+    }
+    const { data, response } = await apiClient.GET("/clients", {
+      params: {
+        query: {
+          pageSize: 50,
+          page: 1,
+          search: search.trim() || undefined,
+        },
+      },
+    });
+    if (response.ok && data) {
+      setClients(data.clients);
+    }
+  }
+
   useEffect(() => {
     if (!contractId) {
       return;
@@ -156,6 +181,29 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
         setIsAmendment(data.isAmendment);
         if (data.parentContractId) {
           setParentContractId(data.parentContractId);
+        }
+        if (data.clientId) {
+          setClientId(data.clientId);
+          if (data.clientName) {
+            setClients((prev) => {
+              if (prev.some((item) => item.id === data.clientId)) {
+                return prev;
+              }
+              return [
+                {
+                  id: data.clientId!,
+                  name: data.clientName!,
+                  address: "",
+                  contactPerson: "",
+                  contactEmail: "",
+                  contactPhone: "",
+                  vatNumber: "",
+                  createdAt: data.createdAt,
+                },
+                ...prev,
+              ];
+            });
+          }
         }
         if (data.category) {
           setCategory(data.category as any);
@@ -187,6 +235,16 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
     return () => window.clearTimeout(handle);
   }, [isAmendment, parentSearch, entityHeaderValue]);
 
+  useEffect(() => {
+    if (!canLookupClients) {
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      void loadClients(clientSearch);
+    }, 200);
+    return () => window.clearTimeout(handle);
+  }, [canLookupClients, clientSearch]);
+
   function validate(showAll = false): boolean {
     let ok = true;
 
@@ -197,6 +255,18 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
       ok = false;
     } else {
       setFileError(undefined);
+    }
+    if (!clientId) {
+      if (showAll) {
+        setClientError(
+          canLookupClients
+            ? "Select a client."
+            : "Client lookup requires manage_clients permission.",
+        );
+      }
+      ok = false;
+    } else {
+      setClientError(undefined);
     }
     if (isAmendment && !parentContractId) {
       if (showAll) {
@@ -276,6 +346,7 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
           body: {
             category,
             currency: currency as any,
+            clientId,
             clientFileKey: fileKey,
             clientFileName: fileName,
             clientFileContentType: fileContentType,
@@ -297,6 +368,7 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
             clientFileName: fileName,
             clientFileContentType: fileContentType,
             clientFileSizeBytes: fileSize,
+            clientId,
             isAmendment,
             parentContractId: isAmendment ? parentContractId : undefined,
             category,
@@ -438,6 +510,38 @@ export function Step1UploadPage({ me: _me }: Step1UploadPageProps) {
               </p>
             )}
           </div>
+        ) : null}
+
+        <SearchableSelect
+          label="Client"
+          value={clientId}
+          error={clientError}
+          disabled={!canLookupClients}
+          placeholder={canLookupClients ? "Search clients" : "Client lookup unavailable"}
+          options={clients.map((item) => ({
+            value: item.id,
+            label: item.name,
+          }))}
+          onChange={(next) => {
+            setClientId(next);
+            setClientError(undefined);
+          }}
+          onSearchChange={setClientSearch}
+          onBlur={() => {
+            if (!clientId) {
+              setClientError(
+                canLookupClients
+                  ? "Select a client."
+                  : "Client lookup requires manage_clients permission.",
+              );
+            }
+          }}
+        />
+        {!canLookupClients ? (
+          <p className="contract-hint">
+            Client lookup requires the manage_clients permission. Ask an admin to grant it or assign
+            a client via an account that has it.
+          </p>
         ) : null}
 
         <label className="ui-field contract-amendment-toggle">

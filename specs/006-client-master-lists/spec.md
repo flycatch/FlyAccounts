@@ -14,7 +14,7 @@
 
 - Q: Client scope? → A: Global — one client list shared across all legal entities. Contracts still belong to an entity via `X-Entity-Id`.
 - Q: Client form required fields? → A: All fields except Notes (Name, Address, Contact Person, Contact Email, Contact Phone, VAT/Tax Registration Number).
-- Q: Contract client reference? → A: Removed (contracts no longer reference clients).
+- Q: Contract client reference? → A: Contracts store `client_id` referencing the global Client master; create/edit require a selected client (DB column nullable for legacy rows).
 - Q: Speckit artifacts? → A: Only `spec.md` for this feature (no plan/research/tasks/openapi copies under 006).
 
 ## User Scenarios & Testing *(mandatory)*
@@ -36,7 +36,19 @@ A person with `manage_clients` opens Clients from the sidebar and creates, views
 
 ---
 
-### User Story 2 - [DELETED] (Contracts no longer reference clients)
+### User Story 2 - Select existing client on contract create/edit (Priority: P1)
+
+A person creating or editing a contract picks a Client from the global master via searchable select. The contract stores `client_id` only (no duplicated client fields). Lookup uses existing `GET /clients` (requires `manage_clients`).
+
+**Why this priority**: Contracts must reference a reusable counterparty without re-entering client details.
+
+**Independent Test**: Create a client, create a contract selecting that client, confirm detail shows the client name; try deleting the client and confirm `client_in_use`.
+
+**Acceptance Scenarios**:
+
+1. **Given** clients exist and the person has `manage_clients`, **When** they create a contract and select a client, **Then** the contract is saved with that `clientId` and responses include `clientName`.
+2. **Given** a contract without a client (legacy), **When** they edit and save, **Then** a client selection is required.
+3. **Given** a client is linked to non-deleted contracts, **When** they delete the client, **Then** the API returns `client_in_use`.
 
 ---
 
@@ -100,7 +112,7 @@ Successful create/update/delete and other user-triggered mutations (assign, revo
 - **FR-001**: System MUST provide global Client CRUD via `/clients` gated by `manage_clients`.
 - **FR-002**: Client create/update MUST require Name, Address, Contact Person, Contact Email, Contact Phone, and VAT; Notes optional; email format validated.
 - **FR-003**: Deleting a client linked to non-deleted contracts MUST fail with `client_in_use`.
-- **FR-004**: [DELETED] (Contracts no longer reference clients).
+- **FR-004**: Contract create MUST require `clientId` referencing an existing Client; update/complete MUST reject missing client; responses MAY omit `clientId`/`clientName` for legacy rows. Client lookup uses existing `/clients` (no duplicate Client CRUD on contract forms).
 - **FR-005**: `GET /clients`, `/contracts`, `/people`, and `/roles` MUST support `search`, `page`, and `pageSize` with `total` in the response.
 - **FR-006**: List UIs MUST sync `search`, `page`, and `pageSize` to the URL and reset page when search changes.
 - **FR-007**: Forms in scope MUST validate on blur and submit with inline field errors.
@@ -109,7 +121,7 @@ Successful create/update/delete and other user-triggered mutations (assign, revo
 ## Success Criteria
 
 - Clients sidebar page with modal Create/View/Edit/Delete works end-to-end.
-- [DELETED] (Contracts no longer reference clients).
+- Contract create/edit selects an existing client; delete of an in-use client returns `client_in_use`.
 - Clients, Contracts, Users, and Roles lists are server-paginated and URL-driven.
 - Validation is blur+submit with inline errors; mutations use toasts.
 - OpenAPI remains SSOT; backend and frontend tests cover clients, pagination, and dependency delete.

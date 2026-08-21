@@ -28,7 +28,7 @@ FlyAccounts replaces the standalone access-administration home with **Settings**
 
 **Constraints**: Secrets and `INITIAL_ADMIN_EMAIL` only via environment. No dummy or local-password sign-in. Access JWT MUST NOT embed roles. Invite is an in-app record (no outbound email). Personal Microsoft accounts remain refused. Permissions are module-level named capabilities on one table (`module` plus nullable `action`); no permission-type editor; authorization is exact `code` match with no prefix inheritance.
 
-**Scale/Scope**: Settings (Users, Roles, Permissions), invite + organization entry, role CRUD, attach/detach existing permissions, cancel unused invite, remove signed-in person. No legal-entity switching, no finance modules beyond standing field policy, no invitation email.
+**Scale/Scope**: Settings (Users, Roles, Permissions), invite + organization entry, role CRUD, attach/detach existing permissions, cancel unused invite, remove signed-in person. No legal-entity switching, no finance modules beyond standing field policy. Invitation email is sent via backend SMTP when configured.
 
 ## Constitution Check
 
