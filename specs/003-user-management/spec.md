@@ -247,7 +247,7 @@ A person with access-administration cancels an invite that has not been used to 
 - Microsoft proves identity only. FlyAccounts decides what a signed-in person may do (combined permissions of assigned roles). Who may enter is any accepted organizational Microsoft account, with invite as an optional pre-provision path.
 - Combined permissions means the union of permissions from all assigned roles. A permission is granted if any assigned role includes it.
 - Role names are labels. Authorization checks permissions, not role display names.
-- Invite is an in-app record keyed by organizational work email. Sending an email message is not required in this feature.
+- Invite is an in-app record keyed by organizational work email. Creating an invite also sends an invitation email with a frontend invite URL when SMTP is configured.
 - Invite does not require the person to have signed in first.
 - Only organizational Microsoft work or school accounts are accepted. Personal Microsoft accounts remain out of scope.
 - The designated initial Microsoft identity from the previous authentication feature may sign in without a prior invite so the first person can invite others. That identity is supplied by environment configuration, not project source. Other organizational accounts may also sign in without an invite.
@@ -266,7 +266,6 @@ A person with access-administration cancels an invite that has not been used to 
 The following MUST NOT be delivered in this feature:
 
 - Creating, renaming, or deleting permission types
-- Sending invitation email or other outbound messages
 - A permanent denylist or block of a specific organizational account (beyond cancel or remove, which do not prevent later organization-based sign-in)
 - Legal-entity switching and the consolidated read-only view
 - Contract Management, Resource Allocation, invoicing, payments, ledgers, reporting, tax, ZATCA, and other business modules beyond permission checks and the standing field policy already specified

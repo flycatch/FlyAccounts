@@ -219,7 +219,7 @@ export interface paths {
         put?: never;
         /**
          * Invite a person by organizational work email
-         * @description Requires manage_users. Creates an unused invite with zero or more existing roles. The invited person cannot use the application until they sign in. Duplicate active invite of the same email is refused. Invite of an email that already belongs to a listed User is refused. Sending email is not part of this operation.
+         * @description Requires manage_users. Creates an unused invite with zero or more existing roles, generates an invite token, and sends an invitation email with a frontend invite URL. The invited person cannot use the application until they sign in. The raw invite token is never returned in the response. Duplicate active invite of the same email is refused. Invite of an email that already belongs to a listed User is refused. If the invitation email cannot be sent, the invite is not recorded and a generic error is returned without SMTP credentials or internal details.
          */
         post: operations["createInvite"];
         delete?: never;
@@ -570,7 +570,7 @@ export interface components {
     schemas: {
         ErrorResponse: {
             /** @enum {string} */
-            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required" | "duplicate_invite" | "already_present" | "duplicate_role_name" | "role_still_assigned" | "duplicate_permission" | "validation_error" | "entity_context_required" | "invalid_currency" | "invalid_file_type" | "client_in_use" | "duplicate_client_name";
+            code: "invalid_token" | "personal_account" | "unknown_tenant" | "unauthorized" | "forbidden" | "pending_access" | "not_found" | "duplicate_assignment" | "last_admin_required" | "duplicate_invite" | "already_present" | "duplicate_role_name" | "role_still_assigned" | "duplicate_permission" | "validation_error" | "entity_context_required" | "invalid_currency" | "invalid_file_type" | "client_in_use" | "duplicate_client_name" | "invite_email_failed";
             message: string;
         };
         MicrosoftTokenRequest: {
@@ -777,6 +777,13 @@ export interface components {
             /** Format: uuid */
             parentContractId?: string;
             parentContractReference?: string;
+            /**
+             * Format: uuid
+             * @description Omitted when unset (legacy rows).
+             */
+            clientId?: string;
+            /** @description Denormalized client name; omitted when clientId is unset. */
+            clientName?: string;
             /** Format: uuid */
             closureOwnerUserId?: string;
             closureOwnerName?: string;
@@ -817,6 +824,11 @@ export interface components {
         };
         CreateContractRequest: {
             clientFileKey: string;
+            /**
+             * Format: uuid
+             * @description Required. References an existing global Client.
+             */
+            clientId: string;
             isAmendment: boolean;
             /** Format: uuid */
             parentContractId?: string;
@@ -840,6 +852,11 @@ export interface components {
             /** @enum {string} */
             currency?: "INR" | "USD" | "SAR";
             clientFileKey?: string;
+            /**
+             * Format: uuid
+             * @description When set, must reference an existing global Client. Required to complete a draft.
+             */
+            clientId?: string;
             clientFileName?: string;
             clientFileContentType?: string;
             clientFileSizeBytes?: number;
@@ -882,6 +899,13 @@ export interface components {
             /** Format: uuid */
             parentContractId?: string;
             parentContractReference?: string;
+            /**
+             * Format: uuid
+             * @description Omitted when unset (legacy rows).
+             */
+            clientId?: string;
+            /** @description Denormalized client name; omitted when clientId is unset. */
+            clientName?: string;
             /** Format: uuid */
             closureOwnerUserId?: string;
             closureOwnerName?: string;
@@ -1563,7 +1587,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Invite recorded. */
+            /** @description Invite recorded and invitation email sent. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1605,6 +1629,21 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invitation email could not be sent; invite was not recorded. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "invite_email_failed",
+                     *       "message": "The invitation email could not be sent."
+                     *     }
+                     */
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };

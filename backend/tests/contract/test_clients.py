@@ -70,7 +70,42 @@ def test_clients_crud_and_search_pagination(client, db: Session):
     assert deleted.status_code == 204
 
 
+def test_delete_client_in_use_returns_409(client, db: Session):
+    from datetime import date, datetime, timezone
 
+    from sqlalchemy import select
+
+    from app.models import Contract, LegalEntity
+
+    admin = _admin(db)
+    headers = auth_header(admin)
+    party = create_client(db, name="Linked Client")
+    entity = db.scalars(select(LegalEntity).where(LegalEntity.code == "entity_a")).one()
+    contract = Contract(
+        entity_id=entity.id,
+        reference="CTR-LINK1",
+        category="data_management",
+        currency="INR",
+        is_amendment=False,
+        is_draft=False,
+        client_id=party.id,
+        client_file_key="contracts/demo.pdf",
+        created_by_user_id=admin.id,
+        created_at=datetime.now(timezone.utc),
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 12, 31),
+        project_status="active",
+        payment_type="project_value",
+        project_value="100.00",
+        closure_owner_user_id=admin.id,
+    )
+    db.add(contract)
+    db.commit()
+
+    blocked = client.delete(f"/v1/clients/{party.id}", headers=headers)
+    assert blocked.status_code == 409
+    assert blocked.json()["code"] == "client_in_use"
+    assert "1" in blocked.json()["message"]
 
 
 def test_clients_require_manage_clients(client, db: Session):

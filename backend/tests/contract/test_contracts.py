@@ -8,7 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Contract, ContractResource, LegalEntity, User
-from tests.conftest import assign_role, auth_header, create_role, create_user, role_by_name
+from tests.conftest import (
+    assign_role,
+    auth_header,
+    create_client,
+    create_role,
+    create_user,
+    role_by_name,
+)
 
 
 def _entity(db: Session, code: str) -> LegalEntity:
@@ -92,6 +99,7 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
     admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
     assign_role(db, admin, role_by_name(db, "System Admin"))
     entity_a = _entity(db, "entity_a")
+    party = create_client(db, name="Acme Corp")
     db.commit()
 
     payload = {
@@ -99,6 +107,7 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
         "clientFileName": "file.pdf",
         "clientFileContentType": "application/pdf",
         "clientFileSizeBytes": 12,
+        "clientId": str(party.id),
         "isAmendment": False,
         "category": "time_and_material",
         "currency": "INR",
@@ -112,6 +121,8 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
     body = created.json()
     assert body["isDraft"] is True
     assert body["reference"] == "CTR-0001"
+    assert body["clientId"] == str(party.id)
+    assert body["clientName"] == "Acme Corp"
     assert "closureOwnerUserId" not in body or body.get("startDate") is None
 
     listed = client.get(
@@ -122,16 +133,52 @@ def test_step1_create_generates_reference_and_one_list_row(client, db: Session):
     assert listed.json()["total"] >= 1
     rows = [item for item in listed.json()["contracts"] if item["reference"] == "CTR-0001"]
     assert len(rows) == 1
+    assert rows[0]["clientName"] == "Acme Corp"
+
+
+def test_create_requires_valid_client_id(client, db: Session):
+    admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
+    assign_role(db, admin, role_by_name(db, "System Admin"))
+    entity_a = _entity(db, "entity_a")
+    db.commit()
+
+    missing = client.post(
+        "/v1/contracts",
+        headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
+        json={
+            "clientFileKey": "contracts/file.pdf",
+            "isAmendment": False,
+            "category": "time_and_material",
+            "currency": "INR",
+        },
+    )
+    assert missing.status_code == 422
+
+    unknown = client.post(
+        "/v1/contracts",
+        headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
+        json={
+            "clientFileKey": "contracts/file.pdf",
+            "clientId": str(uuid.uuid4()),
+            "isAmendment": False,
+            "category": "time_and_material",
+            "currency": "INR",
+        },
+    )
+    assert unknown.status_code == 400
+    assert unknown.json()["code"] == "validation_error"
 
 
 def test_create_rejects_all_entities_and_invalid_currency(client, db: Session):
     admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
     assign_role(db, admin, role_by_name(db, "System Admin"))
     entity_a = _entity(db, "entity_a")
+    party = create_client(db)
     db.commit()
 
     payload = {
         "clientFileKey": "contracts/file.pdf",
+        "clientId": str(party.id),
         "isAmendment": False,
         "category": "time_and_material",
         "currency": "INR",
@@ -159,6 +206,7 @@ def test_patch_completes_after_step3_without_resource(client, db: Session):
     admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
     assign_role(db, admin, role_by_name(db, "System Admin"))
     entity_c = _entity(db, "entity_c")
+    party = create_client(db, name="Entity C Client")
     db.commit()
 
     created = client.post(
@@ -166,6 +214,7 @@ def test_patch_completes_after_step3_without_resource(client, db: Session):
         headers={**auth_header(admin), "X-Entity-Id": str(entity_c.id)},
         json={
             "clientFileKey": "contracts/file.pdf",
+            "clientId": str(party.id),
             "isAmendment": False,
             "category": "data_management",
             "currency": "SAR",
@@ -210,6 +259,61 @@ def test_patch_completes_after_step3_without_resource(client, db: Session):
     assert body["monthlyRate"] == "10.50"
     assert body.get("resourceType") is None
     assert body["reference"].startswith("CTR-")
+    assert body["clientId"] == str(party.id)
+
+
+def test_complete_requires_client_id(client, db: Session):
+    admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
+    assign_role(db, admin, role_by_name(db, "System Admin"))
+    entity_a = _entity(db, "entity_a")
+    contract = Contract(
+        entity_id=entity_a.id,
+        reference="CTR-NOCL",
+        category="data_management",
+        currency="INR",
+        is_amendment=False,
+        is_draft=True,
+        client_file_key="contracts/demo.pdf",
+        created_by_user_id=admin.id,
+        created_at=datetime.now(timezone.utc),
+        closure_owner_user_id=admin.id,
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 6, 1),
+        project_status="active",
+        payment_type="project_value",
+        project_value="100.00",
+    )
+    db.add(contract)
+    db.commit()
+
+    complete = client.patch(
+        f"/v1/contracts/{contract.id}",
+        headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
+        json={"complete": True},
+    )
+    assert complete.status_code == 400
+    assert "clientId" in complete.json()["message"]
+
+
+def test_list_contracts_search_by_client_name(client, db: Session):
+    admin = create_user(db, display_name="Admin", upn="admin@contoso.com")
+    assign_role(db, admin, role_by_name(db, "System Admin"))
+    entity_a = _entity(db, "entity_a")
+    party = create_client(db, name="Zephyr Industries")
+    contract = _create_complete_contract(db, entity=entity_a, owner=admin, reference="CTR-ZEP1")
+    contract.client_id = party.id
+    db.commit()
+
+    listed = client.get(
+        "/v1/contracts",
+        headers={**auth_header(admin), "X-Entity-Id": str(entity_a.id)},
+        params={"search": "zephyr"},
+    )
+    assert listed.status_code == 200
+    body = listed.json()
+    assert body["total"] >= 1
+    assert any(item["reference"] == "CTR-ZEP1" for item in body["contracts"])
+    assert any(item.get("clientName") == "Zephyr Industries" for item in body["contracts"])
 
 
 def test_soft_delete_hides_from_list_and_get(client, db: Session):

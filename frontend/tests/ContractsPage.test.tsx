@@ -43,7 +43,7 @@ const financeMe = {
   displayName: "Pat Finance",
   upn: "finance@contoso.com",
   roles: [{ id: "role-admin", name: "System Admin" }],
-  permissions: ["manage_contracts", "view_contract_financials"],
+  permissions: ["manage_contracts", "view_contract_financials", "manage_clients"],
   landing: { accessState: "authorized" as const, sections: [] },
 };
 
@@ -65,6 +65,8 @@ const listContract = {
   currency: "INR",
   isAmendment: false,
   isDraft: false,
+  clientId: "bbbbbbbb-0000-4000-8000-000000000001",
+  clientName: "Acme Corp",
   closureOwnerUserId: financeMe.id,
   closureOwnerName: financeMe.displayName,
   startDate: "2026-01-01",
@@ -208,6 +210,7 @@ describe("Contracts module UI", () => {
     expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument();
     expect(screen.queryByText(/step 1 of 4/i)).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /time & material/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^client$/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/contract reference/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/parent contract/i)).not.toBeInTheDocument();
     expect(
@@ -360,9 +363,10 @@ describe("Contracts module UI", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^contracts$/i }));
     expect(await screen.findByText("CTR-0133")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /^view$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /view contract/i }));
     expect(await screen.findByRole("heading", { name: "CTR-0133" })).toBeInTheDocument();
     expect(screen.getByText(/upload & category/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Acme Corp").length).toBeGreaterThan(0);
     expect(screen.getByTestId("milestones-table")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^edit$/i }));
@@ -376,7 +380,7 @@ describe("Contracts module UI", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: /^contracts$/i }));
-    const deleteBtn = await screen.findByRole("button", { name: /^delete$/i });
+    const deleteBtn = await screen.findByRole("button", { name: /delete contract/i });
     expect(deleteBtn).toBeDisabled();
     expect(deleteBtn).toHaveAttribute("title", "Delete requires Finance permissions");
   });

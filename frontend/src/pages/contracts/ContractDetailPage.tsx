@@ -157,6 +157,10 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
             <dd>{contract.currency}</dd>
           </div>
           <div>
+            <dt>Client</dt>
+            <dd>{contract.clientName ?? "—"}</dd>
+          </div>
+          <div>
             <dt>Amendment</dt>
             <dd>{contract.isAmendment ? "Yes" : "No"}</dd>
           </div>

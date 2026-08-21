@@ -281,9 +281,27 @@ def auth_settings(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("OPENAPI_PATH", str(FEATURE_OPENAPI))
     monkeypatch.setenv("JWT_ACCESS_TTL_SECONDS", "900")
     monkeypatch.setenv("JWT_REFRESH_TTL_SECONDS", "604800")
+    monkeypatch.setenv("FRONTEND_URL", "http://localhost:8080")
+    monkeypatch.setenv("SMTP_HOST", "smtp.test.local")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USERNAME", "test-smtp-user")
+    monkeypatch.setenv("SMTP_PASSWORD", "test-smtp-password-never-leak")
+    monkeypatch.setenv("SMTP_FROM", "noreply@test.local")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_invite_smtp(monkeypatch: pytest.MonkeyPatch):
+    """Keep invite API tests offline; real MailService unit tests may override."""
+    from unittest.mock import MagicMock
+
+    client = MagicMock()
+    client.__enter__ = MagicMock(return_value=client)
+    client.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr("app.core.mail.smtplib.SMTP", MagicMock(return_value=client))
+    monkeypatch.setattr("app.core.mail.smtplib.SMTP_SSL", MagicMock(return_value=client))
 
 
 @pytest.fixture

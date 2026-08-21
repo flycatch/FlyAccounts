@@ -115,6 +115,7 @@ export function apiErrorMessage(payload: unknown, fallback: string): string {
         duplicate_permission: "That permission is already attached to the role.",
         client_in_use: "This client is linked to contracts and cannot be deleted.",
         duplicate_client_name: "A client with that name already exists.",
+        invite_email_failed: "The invitation email could not be sent.",
       };
       if (mapped[code]) {
         return mapped[code];

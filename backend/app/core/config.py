@@ -20,10 +20,25 @@ class Settings(BaseSettings):
     jwt_signing_key: str = "change-me"
     jwt_access_ttl_seconds: int = 900
     jwt_refresh_ttl_seconds: int = 604800
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    frontend_url: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def public_frontend_url(self) -> str:
+        if self.frontend_url.strip():
+            return self.frontend_url.strip().rstrip("/")
+        origins = self.cors_origin_list
+        if origins:
+            return origins[0].rstrip("/")
+        return ""
 
 
 @lru_cache

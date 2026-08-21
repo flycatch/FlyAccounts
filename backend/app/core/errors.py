@@ -23,6 +23,7 @@ ERROR_INVALID_CURRENCY = "invalid_currency"
 ERROR_INVALID_FILE_TYPE = "invalid_file_type"
 ERROR_CLIENT_IN_USE = "client_in_use"
 ERROR_DUPLICATE_CLIENT_NAME = "duplicate_client_name"
+ERROR_INVITE_EMAIL_FAILED = "invite_email_failed"
 
 
 class ApiError(Exception):
@@ -115,6 +116,10 @@ def client_in_use(message: str = "This client is linked to contracts and cannot 
 
 def duplicate_client_name(message: str = "A client with that name already exists.") -> ApiError:
     return ApiError(409, ERROR_DUPLICATE_CLIENT_NAME, message)
+
+
+def invite_email_failed(message: str = "The invitation email could not be sent.") -> ApiError:
+    return ApiError(502, ERROR_INVITE_EMAIL_FAILED, message)
 
 
 async def api_error_handler(_request: Request, exc: ApiError) -> JSONResponse:

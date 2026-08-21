@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import secrets
+from urllib.parse import urlencode
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
+from app.core.errors import invite_email_failed
+from app.core.mail import MailConfigurationError, MailSendError, MailService
 from app.models import Invite, InviteRole, Role, User
 
 
@@ -42,3 +49,33 @@ def attach_invite_roles(db: Session, invite: Invite, roles: list[Role]) -> None:
     for role in roles:
         db.add(InviteRole(invite_id=invite.id, role_id=role.id))
     db.flush()
+
+
+def generate_invite_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_invite_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def build_invite_url(raw_token: str) -> str:
+    base = get_settings().public_frontend_url
+    query = urlencode({"token": raw_token})
+    return f"{base}/invite?{query}"
+
+
+def send_invite_email(*, to: str, invite_url: str) -> None:
+    body = (
+        "You have been invited to FlyAccounts.\n\n"
+        f"Open this link to continue: {invite_url}\n\n"
+        "Sign in with the matching organizational Microsoft work or school account."
+    )
+    try:
+        MailService().send(
+            to=to,
+            subject="You're invited to FlyAccounts",
+            text_body=body,
+        )
+    except (MailConfigurationError, MailSendError):
+        raise invite_email_failed() from None

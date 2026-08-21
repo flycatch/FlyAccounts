@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import type { components } from "../../api/schema";
 import { apiClient } from "../../api/client";
 import { PillToggle } from "../../components/PillToggle";
+import { SearchableSelect } from "../../components/SearchableSelect";
 import { SelectField } from "../../components/SelectField";
 import { TextareaField } from "../../components/TextareaField";
 import { TextField } from "../../components/TextField";
@@ -14,6 +15,7 @@ import "./create/ContractCreate.css";
 
 type MeResponse = components["schemas"]["MeResponse"];
 type ContractDetail = components["schemas"]["ContractDetail"];
+type Client = components["schemas"]["Client"];
 
 const STATUSES = [
   { value: "active", label: "Active" },
@@ -37,8 +39,12 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
   const navigate = useNavigate();
   const { isAllEntities, entityHeaderValue } = useEntityContext();
   const canViewFinancials = me.permissions.includes("view_contract_financials");
+  const canLookupClients = me.permissions.includes("manage_clients");
   const [contract, setContract] = useState<ContractDetail | null>(null);
   const [owners, setOwners] = useState<{ id: string; displayName: string }[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientId, setClientId] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
   const [closureOwnerUserId, setClosureOwnerUserId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -82,6 +88,21 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
         setOwners(ownersRes.data.owners);
       }
 
+      setClientId(data.clientId ?? "");
+      if (data.clientId && data.clientName) {
+        setClients([
+          {
+            id: data.clientId,
+            name: data.clientName,
+            address: "",
+            contactPerson: "",
+            contactEmail: "",
+            contactPhone: "",
+            vatNumber: "",
+            createdAt: data.createdAt,
+          },
+        ]);
+      }
       setClosureOwnerUserId(data.closureOwnerUserId ?? me.id);
       setStartDate(data.startDate ?? "");
       setEndDate(data.endDate ?? "");
@@ -114,6 +135,42 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
     };
   }, [contractId, entityHeaderValue, me.id]);
 
+  useEffect(() => {
+    if (!canLookupClients) {
+      return;
+    }
+    let cancelled = false;
+    async function loadClients(search = "") {
+      const { data, response } = await apiClient.GET("/clients", {
+        params: {
+          query: {
+            pageSize: 50,
+            page: 1,
+            search: search.trim() || undefined,
+          },
+        },
+      });
+      if (cancelled || !response.ok || !data) {
+        return;
+      }
+      setClients((prev) => {
+        const selected = prev.find((item) => item.id === clientId);
+        const merged = [...data.clients];
+        if (selected && !merged.some((item) => item.id === selected.id)) {
+          merged.unshift(selected);
+        }
+        return merged;
+      });
+    }
+    const handle = window.setTimeout(() => {
+      void loadClients(clientSearch);
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [canLookupClients, clientSearch, clientId]);
+
   function handlePaymentTypeChange(next: "project_value" | "monthly") {
     setPaymentType(next);
     if (next === "project_value") {
@@ -129,6 +186,12 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
   function validate(): boolean {
     const next: Record<string, string> = {};
 
+    if (!clientId) {
+      next.client =
+        canLookupClients
+          ? "Select a client."
+          : "Client lookup requires manage_clients permission.";
+    }
     if (!closureOwnerUserId) {
       next.owner = "Closure owner is required.";
     }
@@ -175,7 +238,7 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
     setSubmitting(true);
     setError(null);
     const body: components["schemas"]["UpdateContractRequest"] = {
-
+      clientId,
       closureOwnerUserId,
       startDate,
       endDate,
@@ -260,6 +323,39 @@ export function ContractEditPage({ me }: ContractEditPageProps) {
             ? ` · Parent ${contract.parentContractReference}`
             : ""}
         </p>
+        <div className="contract-create-fields">
+          <SearchableSelect
+            label="Client"
+            value={clientId}
+            error={fieldErrors.client}
+            disabled={!canLookupClients}
+            placeholder={canLookupClients ? "Search clients" : "Client lookup unavailable"}
+            options={clients.map((item) => ({
+              value: item.id,
+              label: item.name,
+            }))}
+            onChange={(next) => {
+              setClientId(next);
+              setFieldErrors((prev) => ({ ...prev, client: "" }));
+            }}
+            onSearchChange={setClientSearch}
+            onBlur={() => {
+              if (!clientId) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  client: canLookupClients
+                    ? "Select a client."
+                    : "Client lookup requires manage_clients permission.",
+                }));
+              }
+            }}
+          />
+          {!canLookupClients ? (
+            <p className="contract-hint">
+              Client lookup requires the manage_clients permission.
+            </p>
+          ) : null}
+        </div>
       </section>
 
       <section className="contract-detail-section contract-create-fields">
