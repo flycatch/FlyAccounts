@@ -484,6 +484,94 @@ export interface paths {
         patch: operations["updateResource"];
         trace?: never;
     };
+    "/proformas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List proformas scoped by X-Entity-Id
+         * @description Requires manage_proformas. estimatedAmount is omitted when the caller lacks view_contract_financials. Supports search (code, contract reference, client name) and server-side pagination. No statutory tax is calculated for proformas.
+         */
+        get: operations["listProformas"];
+        put?: never;
+        /**
+         * Create a proforma
+         * @description Requires manage_proformas and a concrete X-Entity-Id. Snapshots client name, address, VAT, and email from the linked contract client. Does not calculate GST/ZATCA.
+         */
+        post: operations["createProforma"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/proformas/letterhead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Proforma company and bank letterhead from environment configuration
+         * @description Requires manage_proformas. Returns company contact and account details used on proforma invoices and PDFs. Values come from deployment environment settings; empty strings when unset. No tax or VAT fields.
+         */
+        get: operations["getProformaLetterhead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/proformas/{proformaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a proforma by id
+         * @description Requires manage_proformas. estimatedAmount is omitted when the caller lacks view_contract_financials. Scoped by optional X-Entity-Id.
+         */
+        get: operations["getProforma"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a proforma
+         * @description Requires manage_proformas and a concrete X-Entity-Id. Updates validUntil, status, and optional estimatedAmount. Does not change contract linkage or client snapshot. No statutory tax is calculated.
+         */
+        patch: operations["updateProforma"];
+        trace?: never;
+    };
+    "/proformas/{proformaId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download branded proforma invoice PDF
+         * @description Requires manage_proformas. Returns application/pdf matching the proforma invoice template (English). Amounts are redacted without view_contract_financials. No GST/ZATCA or VAT lines. Account details come from environment letterhead settings.
+         */
+        get: operations["downloadProformaPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contracts": {
         parameters: {
             query?: never;
@@ -493,7 +581,7 @@ export interface paths {
         };
         /**
          * List contracts scoped by X-Entity-Id
-         * @description Requires manage_contracts or manage_resources. Financial amount fields are omitted when the caller lacks view_contract_financials. Supports search (reference, closure owner, client name), status, and server-side pagination. Callers with only manage_resources may list for the resource contract picker; create/update/delete still require manage_contracts.
+         * @description Requires manage_contracts, manage_resources, or manage_proformas. Financial amount fields are omitted when the caller lacks view_contract_financials. Supports search (reference, closure owner, client name), status, and server-side pagination. Callers with only manage_resources may list for the resource contract picker; create/update/delete still require manage_contracts.
          */
         get: operations["listContracts"];
         put?: never;
@@ -906,6 +994,15 @@ export interface components {
             clientId?: string;
             /** @description Denormalized client name; omitted when clientId is unset. */
             clientName?: string;
+            /** @description Client address for proforma auto-fill; omitted when clientId is unset. */
+            clientAddress?: string;
+            /** @description Client VAT/tax registration number; omitted when clientId is unset. */
+            clientVatNumber?: string;
+            /**
+             * Format: email
+             * @description Client contact email; omitted when clientId is unset.
+             */
+            clientEmail?: string;
             /** Format: uuid */
             closureOwnerUserId?: string;
             closureOwnerName?: string;
@@ -1028,6 +1125,73 @@ export interface components {
             contractId?: string;
             month?: string;
         };
+        Proforma: {
+            /** Format: uuid */
+            id: string;
+            /** @description Human-readable Proforma ID (e.g. PF-0001). */
+            code: string;
+            /** Format: uuid */
+            entityId: string;
+            entityName: string;
+            /** Format: uuid */
+            contractId: string;
+            contractReference: string;
+            clientName: string;
+            clientAddress?: string;
+            clientVatNumber?: string;
+            /** Format: email */
+            clientEmail?: string;
+            /** @description Decimal string; omitted without view_contract_financials */
+            estimatedAmount?: string;
+            /** @enum {string} */
+            currency: "INR" | "USD" | "SAR";
+            /** Format: date */
+            validUntil: string;
+            /** @enum {string} */
+            status: "draft" | "shared_with_client" | "approved";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ProformasResponse: {
+            proformas: components["schemas"]["Proforma"][];
+            page: number;
+            /** @enum {integer} */
+            pageSize: 10 | 25 | 50;
+            total: number;
+        };
+        CreateProformaRequest: {
+            /** Format: uuid */
+            contractId: string;
+            /** @description Decimal string. Optional; when omitted, server may derive from the contract. Omitted from responses without view_contract_financials. */
+            estimatedAmount?: string;
+            /** Format: date */
+            validUntil: string;
+            /** @enum {string} */
+            status: "draft" | "shared_with_client" | "approved";
+        };
+        UpdateProformaRequest: {
+            /** @description Decimal string. Omitted from responses without view_contract_financials. */
+            estimatedAmount?: string;
+            /** Format: date */
+            validUntil?: string;
+            /** @enum {string} */
+            status?: "draft" | "shared_with_client" | "approved";
+        };
+        ProformaLetterhead: {
+            companyAddressLine1: string;
+            companyAddressLine2: string;
+            companyCity: string;
+            companyState: string;
+            companyPostalCode: string;
+            companyCountry: string;
+            companyPhone: string;
+            companyEmail: string;
+            accountName: string;
+            accountNumber: string;
+            iban: string;
+            bankName: string;
+            bankAddress: string;
+        };
     };
     responses: never;
     parameters: {
@@ -1049,6 +1213,7 @@ export interface components {
         ListSortOrder: "asc" | "desc";
         ClientId: string;
         ResourceId: string;
+        ProformaId: string;
     };
     requestBodies: never;
     headers: never;
@@ -2703,6 +2868,324 @@ export interface operations {
                 };
             };
             /** @description Forbidden or All Entities update rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listProformas: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive search across relevant text fields. */
+                search?: components["parameters"]["ListSearch"];
+                /** @description 1-based page index. */
+                page?: components["parameters"]["ListPage"];
+                /** @description Page size. */
+                pageSize?: components["parameters"]["ListPageSize"];
+            };
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proformas in entity context. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProformasResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createProforma: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProformaRequest"];
+            };
+        };
+        responses: {
+            /** @description Proforma created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proforma"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden or All Entities create rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Contract not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getProformaLetterhead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Letterhead fields */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProformaLetterhead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getProforma: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                proformaId: components["parameters"]["ProformaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proforma detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proforma"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateProforma: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                proformaId: components["parameters"]["ProformaId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProformaRequest"];
+            };
+        };
+        responses: {
+            /** @description Proforma updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Proforma"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden or All Entities update rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    downloadProformaPdf: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Active legal entity UUID, or * for All Entities consolidated. Omit means All Entities. Create requires a concrete UUID. */
+                "X-Entity-Id"?: components["parameters"]["EntityIdHeader"];
+            };
+            path: {
+                proformaId: components["parameters"]["ProformaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF attachment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;

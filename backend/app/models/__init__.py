@@ -3,6 +3,7 @@ from app.models.client import Client
 from app.models.contract import Contract, ContractMilestone, ContractResource
 from app.models.entity import LegalEntity
 from app.models.invite import Invite, InviteRole
+from app.models.proforma import Proforma
 from app.models.rbac import Permission, Role, RoleAssignment, RolePermission
 from app.models.refresh_token import RefreshToken
 from app.models.resource import Resource
@@ -18,6 +19,7 @@ __all__ = [
     "InviteRole",
     "LegalEntity",
     "Permission",
+    "Proforma",
     "RefreshToken",
     "Resource",
     "Role",

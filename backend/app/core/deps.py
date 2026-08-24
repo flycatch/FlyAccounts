@@ -13,6 +13,7 @@ from app.core.permissions import (
     MANAGE_CLIENTS,
     MANAGE_CONTRACTS,
     MANAGE_PERMISSIONS,
+    MANAGE_PROFORMAS,
     MANAGE_RESOURCES,
     MANAGE_ROLES,
     MANAGE_USERS,
@@ -92,8 +93,22 @@ def require_manage_contracts(current: CurrentUser = Depends(get_current_user)) -
     return _require_permission(current, MANAGE_CONTRACTS)
 
 
+def require_manage_proformas(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    return _require_permission(current, MANAGE_PROFORMAS)
+
+
 def require_list_contracts(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-    if MANAGE_CONTRACTS in current.permissions or MANAGE_RESOURCES in current.permissions:
+    if (
+        MANAGE_CONTRACTS in current.permissions
+        or MANAGE_RESOURCES in current.permissions
+        or MANAGE_PROFORMAS in current.permissions
+    ):
+        return current
+    raise forbidden()
+
+
+def require_read_contract(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    if MANAGE_CONTRACTS in current.permissions or MANAGE_PROFORMAS in current.permissions:
         return current
     raise forbidden()
 

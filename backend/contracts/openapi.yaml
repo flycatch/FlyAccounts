@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
   title: FlyAccounts
-  description: 'FlyAccounts API 7.0.0: entity-scoped Resources CRUD with search, pagination, and sorting;
-    global Clients; server-side lists on contracts, people, roles.'
-  version: 7.0.0
+  description: 'FlyAccounts API 8.1.0: proforma view/edit/letterhead; entity-scoped Proformas list/create
+    with branded PDF download; Resources CRUD; global Clients; contracts, people, roles.'
+  version: 8.1.0
 servers:
 - url: /v1
   description: Versioned API prefix
@@ -16,6 +16,7 @@ tags:
 - name: Contracts
 - name: Clients
 - name: Resources
+- name: Proformas
 paths:
   /auth/microsoft:
     post:
@@ -1303,11 +1304,253 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /proformas:
+    get:
+      operationId: listProformas
+      summary: List proformas scoped by X-Entity-Id
+      description: Requires manage_proformas. estimatedAmount is omitted when the caller lacks
+        view_contract_financials. Supports search (code, contract reference, client name) and
+        server-side pagination. No statutory tax is calculated for proformas.
+      tags:
+      - Proformas
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/EntityIdHeader'
+      - $ref: '#/components/parameters/ListSearch'
+      - $ref: '#/components/parameters/ListPage'
+      - $ref: '#/components/parameters/ListPageSize'
+      responses:
+        '200':
+          description: Proformas in entity context.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProformasResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createProforma
+      summary: Create a proforma
+      description: Requires manage_proformas and a concrete X-Entity-Id. Snapshots client name,
+        address, VAT, and email from the linked contract client. Does not calculate GST/ZATCA.
+      tags:
+      - Proformas
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/EntityIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProformaRequest'
+      responses:
+        '201':
+          description: Proforma created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proforma'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden or All Entities create rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /proformas/letterhead:
+    get:
+      operationId: getProformaLetterhead
+      summary: Proforma company and bank letterhead from environment configuration
+      description: Requires manage_proformas. Returns company contact and account details used on
+        proforma invoices and PDFs. Values come from deployment environment settings; empty strings
+        when unset. No tax or VAT fields.
+      tags:
+      - Proformas
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Letterhead fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProformaLetterhead'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /proformas/{proformaId}:
+    get:
+      operationId: getProforma
+      summary: Get a proforma by id
+      description: Requires manage_proformas. estimatedAmount is omitted when the caller lacks
+        view_contract_financials. Scoped by optional X-Entity-Id.
+      tags:
+      - Proformas
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/EntityIdHeader'
+      - $ref: '#/components/parameters/ProformaId'
+      responses:
+        '200':
+          description: Proforma detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proforma'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      operationId: updateProforma
+      summary: Update a proforma
+      description: Requires manage_proformas and a concrete X-Entity-Id. Updates validUntil, status,
+        and optional estimatedAmount. Does not change contract linkage or client snapshot. No
+        statutory tax is calculated.
+      tags:
+      - Proformas
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/EntityIdHeader'
+      - $ref: '#/components/parameters/ProformaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProformaRequest'
+      responses:
+        '200':
+          description: Proforma updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Proforma'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden or All Entities update rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /proformas/{proformaId}/pdf:
+    get:
+      operationId: downloadProformaPdf
+      summary: Download branded proforma invoice PDF
+      description: Requires manage_proformas. Returns application/pdf matching the proforma invoice
+        template (English). Amounts are redacted without view_contract_financials. No GST/ZATCA or
+        VAT lines. Account details come from environment letterhead settings.
+      tags:
+      - Proformas
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/EntityIdHeader'
+      - $ref: '#/components/parameters/ProformaId'
+      responses:
+        '200':
+          description: PDF attachment
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /contracts:
     get:
       operationId: listContracts
       summary: List contracts scoped by X-Entity-Id
-      description: Requires manage_contracts or manage_resources. Financial amount fields are omitted when the caller lacks
+      description: Requires manage_contracts, manage_resources, or manage_proformas. Financial amount fields are omitted when the caller lacks
         view_contract_financials. Supports search (reference, closure owner, client name), status, and
         server-side pagination. Callers with only manage_resources may list for the resource contract picker;
         create/update/delete still require manage_contracts.
@@ -1696,6 +1939,13 @@ components:
         format: uuid
     ResourceId:
       name: resourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProformaId:
+      name: proformaId
       in: path
       required: true
       schema:
@@ -2525,6 +2775,16 @@ components:
         clientName:
           type: string
           description: Denormalized client name; omitted when clientId is unset.
+        clientAddress:
+          type: string
+          description: Client address for proforma auto-fill; omitted when clientId is unset.
+        clientVatNumber:
+          type: string
+          description: Client VAT/tax registration number; omitted when clientId is unset.
+        clientEmail:
+          type: string
+          format: email
+          description: Client contact email; omitted when clientId is unset.
         closureOwnerUserId:
           type: string
           format: uuid
@@ -2835,3 +3095,174 @@ components:
         month:
           type: string
           pattern: '^\d{4}-\d{2}$'
+
+    Proforma:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - entityId
+      - entityName
+      - contractId
+      - contractReference
+      - clientName
+      - currency
+      - validUntil
+      - status
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Human-readable Proforma ID (e.g. PF-0001).
+        entityId:
+          type: string
+          format: uuid
+        entityName:
+          type: string
+        contractId:
+          type: string
+          format: uuid
+        contractReference:
+          type: string
+        clientName:
+          type: string
+        clientAddress:
+          type: string
+        clientVatNumber:
+          type: string
+        clientEmail:
+          type: string
+          format: email
+        estimatedAmount:
+          type: string
+          description: Decimal string; omitted without view_contract_financials
+        currency:
+          type: string
+          enum:
+          - INR
+          - USD
+          - SAR
+        validUntil:
+          type: string
+          format: date
+        status:
+          type: string
+          enum:
+          - draft
+          - shared_with_client
+          - approved
+        createdAt:
+          type: string
+          format: date-time
+    ProformasResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - proformas
+      - page
+      - pageSize
+      - total
+      properties:
+        proformas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Proforma'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          enum:
+          - 10
+          - 25
+          - 50
+        total:
+          type: integer
+          minimum: 0
+    CreateProformaRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - contractId
+      - validUntil
+      - status
+      properties:
+        contractId:
+          type: string
+          format: uuid
+        estimatedAmount:
+          type: string
+          description: Decimal string. Optional; when omitted, server may derive from the contract. Omitted from responses without view_contract_financials.
+        validUntil:
+          type: string
+          format: date
+        status:
+          type: string
+          enum:
+          - draft
+          - shared_with_client
+          - approved
+    UpdateProformaRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        estimatedAmount:
+          type: string
+          description: Decimal string. Omitted from responses without view_contract_financials.
+        validUntil:
+          type: string
+          format: date
+        status:
+          type: string
+          enum:
+          - draft
+          - shared_with_client
+          - approved
+    ProformaLetterhead:
+      type: object
+      additionalProperties: false
+      required:
+      - companyAddressLine1
+      - companyAddressLine2
+      - companyCity
+      - companyState
+      - companyPostalCode
+      - companyCountry
+      - companyPhone
+      - companyEmail
+      - accountName
+      - accountNumber
+      - iban
+      - bankName
+      - bankAddress
+      properties:
+        companyAddressLine1:
+          type: string
+        companyAddressLine2:
+          type: string
+        companyCity:
+          type: string
+        companyState:
+          type: string
+        companyPostalCode:
+          type: string
+        companyCountry:
+          type: string
+        companyPhone:
+          type: string
+        companyEmail:
+          type: string
+        accountName:
+          type: string
+        accountNumber:
+          type: string
+        iban:
+          type: string
+        bankName:
+          type: string
+        bankAddress:
+          type: string

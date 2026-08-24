@@ -15,6 +15,7 @@ from app.core.deps import (
     require_delete_contracts,
     require_list_contracts,
     require_manage_contracts,
+    require_read_contract,
 )
 from app.core.errors import (
     entity_context_required,
@@ -214,6 +215,10 @@ def contract_payload(contract: Contract, *, can_view_financials: bool, detail: b
     if contract.client_id:
         payload["clientId"] = str(contract.client_id)
         payload["clientName"] = contract.client.name if contract.client else ""
+        if detail and contract.client is not None:
+            payload["clientAddress"] = contract.client.address
+            payload["clientVatNumber"] = contract.client.vat_number
+            payload["clientEmail"] = contract.client.contact_email
     if contract.closure_owner_user_id:
         payload["closureOwnerUserId"] = str(contract.closure_owner_user_id)
         payload["closureOwnerName"] = (
@@ -411,7 +416,7 @@ def list_closure_owners(
 def get_contract(
     contract_id: uuid.UUID,
     x_entity_id: str | None = Header(default=None, alias="X-Entity-Id"),
-    current: CurrentUser = Depends(require_manage_contracts),
+    current: CurrentUser = Depends(require_read_contract),
     db: Session = Depends(get_db),
 ) -> dict:
     contract = load_contract(db, contract_id)

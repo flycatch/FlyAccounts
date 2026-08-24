@@ -1,4 +1,4 @@
-import brandIcon from "../assets/icons/sms-tracking.svg";
+import brandIcon from "../assets/icons/flycatch-brand.png";
 
 type SidebarProps = {
   pathname: string;
@@ -9,6 +9,7 @@ type SidebarProps = {
   canClients: boolean;
   canResources: boolean;
   canContracts: boolean;
+  canProformas?: boolean;
   open?: boolean;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
@@ -23,6 +24,7 @@ export function Sidebar({
   canClients,
   canResources,
   canContracts,
+  canProformas = false,
   open = false,
   onNavigate,
   onSignOut,
@@ -31,6 +33,7 @@ export function Sidebar({
   const contractsActive = pathname.startsWith("/contracts");
   const clientsActive = pathname.startsWith("/clients");
   const resourcesActive = pathname.startsWith("/resources");
+  const proformasActive = pathname.startsWith("/proformas");
   return (
     <aside className={`app-shell-sidebar${open ? " is-open" : ""}`} id="app-sidebar">
       <p className="app-shell-brand">
@@ -70,6 +73,15 @@ export function Sidebar({
             onClick={() => onNavigate("/contracts")}
           >
             Contracts
+          </button>
+        ) : null}
+        {canProformas ? (
+          <button
+            type="button"
+            className={`app-shell-nav-item${proformasActive ? " is-active" : ""}`}
+            onClick={() => onNavigate("/proformas")}
+          >
+            Proformas
           </button>
         ) : null}
         {showSettings ? (

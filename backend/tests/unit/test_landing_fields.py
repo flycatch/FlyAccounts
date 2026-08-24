@@ -33,6 +33,7 @@ def test_system_admin_landing_lists_manage_permissions(db):
         "manage_clients",
         "manage_resources",
         "manage_contracts",
+        "manage_proformas",
         "view_contract_financials",
     }
     assert payload["landing"]["sections"] == []

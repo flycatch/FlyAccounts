@@ -13,6 +13,7 @@ MANAGE_PERMISSIONS = "manage_permissions"
 MANAGE_CLIENTS = "manage_clients"
 MANAGE_RESOURCES = "manage_resources"
 MANAGE_CONTRACTS = "manage_contracts"
+MANAGE_PROFORMAS = "manage_proformas"
 VIEW_CONTRACT_FINANCIALS = "view_contract_financials"
 
 

@@ -16,9 +16,9 @@ def test_permissions_catalog_requires_admin(client, db):
     response = client.get("/v1/permissions", headers=auth_header(admin))
     assert response.status_code == 200
     modules = response.json()["modules"]
-    assert len(modules) == 4
+    assert len(modules) == 5
     by_module = {item["module"]: item for item in modules}
-    assert set(by_module) == {"settings", "clients", "contracts", "resources"}
+    assert set(by_module) == {"settings", "clients", "contracts", "resources", "proformas"}
     by_key = {row["permission"]: row for row in by_module["settings"]["permissions"]}
     assert set(by_key) == {"manage_users", "manage_roles", "manage_permissions"}
     assert by_key["manage_users"]["name"] == "Manage users"
@@ -28,6 +28,7 @@ def test_permissions_catalog_requires_admin(client, db):
     assert "code" not in by_key["manage_users"]
     assert {row["permission"] for row in by_module["clients"]["permissions"]} == {"manage_clients"}
     assert {row["permission"] for row in by_module["resources"]["permissions"]} == {"manage_resources"}
+    assert {row["permission"] for row in by_module["proformas"]["permissions"]} == {"manage_proformas"}
     contract_keys = {row["permission"] for row in by_module["contracts"]["permissions"]}
     assert contract_keys == {"manage_contracts", "view_contract_financials"}
     assert client.post("/v1/permissions", headers=auth_header(admin), json={}).status_code in {404, 405}

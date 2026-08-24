@@ -81,6 +81,13 @@ PERMISSION_SEED = [
         "Open Contracts, list contracts, and create contracts for the active entity.",
     ),
     (
+        "manage_proformas",
+        "Manage proformas",
+        "proformas",
+        None,
+        "Open Proformas, create proformas, and download proforma PDFs.",
+    ),
+    (
         "view_contract_financials",
         "View contract financials",
         "contracts",
@@ -92,7 +99,7 @@ PERMISSION_SEED = [
 ROLE_SEED = [
     (
         "System Admin",
-        "Manage users, roles, permissions, clients, resources, and contracts",
+        "Manage users, roles, permissions, clients, resources, contracts, and proformas",
         [
             "manage_users",
             "manage_roles",
@@ -100,6 +107,7 @@ ROLE_SEED = [
             "manage_clients",
             "manage_resources",
             "manage_contracts",
+            "manage_proformas",
             "view_contract_financials",
         ],
     ),

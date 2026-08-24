@@ -16,7 +16,7 @@ apiClient.use({
       request.headers.set("Authorization", `Bearer ${token}`);
     }
     const path = new URL(request.url).pathname;
-    if (path.includes("/contracts") || path.endsWith("/entities")) {
+    if (path.includes("/contracts") || path.includes("/proformas") || path.endsWith("/entities")) {
       request.headers.set("X-Entity-Id", getActiveEntityHeader());
     }
     return request;

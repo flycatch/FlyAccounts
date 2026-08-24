@@ -15,6 +15,10 @@ import { Step1UploadPage } from "./pages/contracts/create/Step1UploadPage";
 import { Step2ClosurePage } from "./pages/contracts/create/Step2ClosurePage";
 import { Step3PaymentPage } from "./pages/contracts/create/Step3PaymentPage";
 import { PendingAccessPage } from "./pages/PendingAccessPage";
+import { NewProformaPage } from "./pages/proformas/NewProformaPage";
+import { ProformasPage } from "./pages/proformas/ProformasPage";
+import { EditProformaPage } from "./pages/proformas/EditProformaPage";
+import { ViewProformaPage } from "./pages/proformas/ViewProformaPage";
 import { ResourcesPage } from "./pages/resources/ResourcesPage";
 import { SignInPage } from "./pages/SignInPage";
 import { PermissionsPage } from "./pages/settings/PermissionsPage";
@@ -49,6 +53,7 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
   const canClients = me.permissions.includes("manage_clients");
   const canResources = me.permissions.includes("manage_resources");
   const canContracts = me.permissions.includes("manage_contracts");
+  const canProformas = me.permissions.includes("manage_proformas");
   const showSettings = canUsers || canRoles || canPermissions;
 
   return (
@@ -63,6 +68,7 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
           canClients={canClients}
           canResources={canResources}
           canContracts={canContracts}
+          canProformas={canProformas}
           onNavigate={(path) => navigate(path)}
           onSignOut={onSignOut}
         >
@@ -81,6 +87,38 @@ function AuthorizedApp({ me, onSignOut }: { me: MeResponse; onSignOut: () => voi
               element={
                 <SettingsGate me={me} permission="manage_resources">
                   <ResourcesPage />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/proformas"
+              element={
+                <SettingsGate me={me} permission="manage_proformas">
+                  <ProformasPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/proformas/new"
+              element={
+                <SettingsGate me={me} permission="manage_proformas">
+                  <NewProformaPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/proformas/:proformaId/edit"
+              element={
+                <SettingsGate me={me} permission="manage_proformas">
+                  <EditProformaPage me={me} />
+                </SettingsGate>
+              }
+            />
+            <Route
+              path="/proformas/:proformaId"
+              element={
+                <SettingsGate me={me} permission="manage_proformas">
+                  <ViewProformaPage me={me} />
                 </SettingsGate>
               }
             />

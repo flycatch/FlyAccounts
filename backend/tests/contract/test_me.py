@@ -59,6 +59,7 @@ def test_me_system_admin_has_manage_permissions(client, db):
         "manage_clients",
         "manage_resources",
         "manage_contracts",
+        "manage_proformas",
         "view_contract_financials",
     }
     assert body["landing"]["sections"] == []

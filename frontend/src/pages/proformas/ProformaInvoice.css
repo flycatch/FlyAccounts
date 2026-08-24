@@ -1,0 +1,318 @@
+.proforma-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.proforma-page-chrome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.proforma-page-chrome-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.proforma-page-chrome h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-page-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.proforma-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.proforma-invoice {
+  --proforma-accent: #0d5952;
+  --proforma-table-bg: #d9eef2;
+  --proforma-border: #c8c8c8;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 0.8px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+}
+
+.proforma-invoice-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.proforma-invoice-brand {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.proforma-invoice-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.proforma-invoice-brand-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--color-black);
+}
+
+.proforma-invoice-section-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 13px;
+  color: var(--color-black);
+}
+
+.proforma-invoice-company-lines,
+.proforma-invoice-client-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-black);
+}
+
+.proforma-invoice-client-box {
+  border: 1px solid var(--proforma-border);
+  border-radius: 2px;
+  padding: var(--space-3);
+  min-height: 120px;
+}
+
+.proforma-invoice-client-box .proforma-invoice-section-title {
+  color: var(--proforma-accent);
+  font-size: 14px;
+}
+
+.proforma-invoice-divider {
+  margin: var(--space-5) 0 var(--space-4);
+  border: 0;
+  border-top: 3px solid var(--proforma-accent);
+}
+
+.proforma-invoice-title {
+  margin: 0 0 var(--space-4);
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--proforma-accent);
+}
+
+.proforma-invoice-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 420px;
+  margin-bottom: var(--space-5);
+}
+
+.proforma-invoice-meta-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 13px;
+}
+
+.proforma-invoice-meta-row dt {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-black);
+}
+
+.proforma-invoice-meta-row dd {
+  margin: 0;
+  min-height: 28px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--proforma-border);
+}
+
+.proforma-invoice-meta-row .ui-field {
+  margin: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 13px;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-black);
+}
+
+.proforma-invoice-meta-row .ui-control {
+  height: 32px;
+  min-height: 32px;
+  border: 0;
+  border-bottom: 1px solid var(--proforma-border);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+}
+
+.proforma-invoice-table-wrap {
+  overflow-x: auto;
+  margin-bottom: var(--space-2);
+}
+
+.proforma-invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.proforma-invoice-table th,
+.proforma-invoice-table td {
+  border: 1px solid var(--proforma-border);
+  padding: 8px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.proforma-invoice-table th {
+  background: var(--proforma-table-bg);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+}
+
+.proforma-invoice-table td.proforma-desc {
+  text-align: left;
+}
+
+.proforma-invoice-totals {
+  width: min(320px, 100%);
+  margin-left: auto;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: var(--space-5);
+}
+
+.proforma-invoice-totals th,
+.proforma-invoice-totals td {
+  border: 1px solid var(--proforma-border);
+  padding: 8px 10px;
+}
+
+.proforma-invoice-totals th {
+  width: 50%;
+  background: var(--proforma-table-bg);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+}
+
+.proforma-invoice-totals td {
+  text-align: right;
+}
+
+.proforma-invoice-totals tr.is-strong th {
+  font-weight: var(--font-weight-bold);
+}
+
+.proforma-invoice-account-title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--proforma-accent);
+}
+
+.proforma-invoice-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 480px;
+}
+
+.proforma-invoice-account-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.proforma-invoice-account-row dt {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.proforma-invoice-account-row dd {
+  margin: 0;
+  min-height: 22px;
+  border-bottom: 1px solid var(--proforma-border);
+  padding-bottom: 2px;
+}
+
+.proforma-invoice-form-block {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-stroke);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.proforma-invoice-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+@media print {
+  .proforma-page-chrome,
+  .proforma-invoice-form-block,
+  .contracts-toolbar,
+  .app-shell-sidebar,
+  .page-header {
+    display: none !important;
+  }
+
+  .proforma-invoice {
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  body {
+    background: white;
+  }
+}
+
+@media (max-width: 720px) {
+  .proforma-invoice-header {
+    grid-template-columns: 1fr;
+  }
+}

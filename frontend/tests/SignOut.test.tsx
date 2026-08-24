@@ -63,6 +63,7 @@ describe("sign out", () => {
           canClients={false}
           canResources={false}
           canContracts={false}
+          canProformas={false}
           onNavigate={() => undefined}
           onSignOut={() => {
             void signOut();

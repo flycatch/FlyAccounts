@@ -27,6 +27,21 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     frontend_url: str = ""
 
+    # Proforma invoice letterhead (company contact + bank). Empty when unset.
+    proforma_company_address_line1: str = ""
+    proforma_company_address_line2: str = ""
+    proforma_company_city: str = ""
+    proforma_company_state: str = ""
+    proforma_company_postal_code: str = ""
+    proforma_company_country: str = ""
+    proforma_company_phone: str = ""
+    proforma_company_email: str = ""
+    proforma_account_name: str = ""
+    proforma_account_number: str = ""
+    proforma_iban: str = ""
+    proforma_bank_name: str = ""
+    proforma_bank_address: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

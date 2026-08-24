@@ -36,6 +36,7 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
   const canDelete =
     me.permissions.includes("manage_contracts") &&
     me.permissions.includes("view_contract_financials");
+  const canCreateProforma = me.permissions.includes("manage_proformas");
   const [contract, setContract] = useState<ContractDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +119,14 @@ export function ContractDetailPage({ me }: ContractDetailPageProps) {
           ) : null}
         </div>
         <div className="contracts-actions">
+          {canCreateProforma && !contract.isDraft ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/proformas/new?contractId=${contract.id}`)}
+            >
+              Create Proforma
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() =>

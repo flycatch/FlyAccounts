@@ -46,6 +46,7 @@ def test_people_and_roles_require_admin(client, db):
         "manage_clients",
         "manage_resources",
         "manage_contracts",
+        "manage_proformas",
         "view_contract_financials",
     }
     member_role = next(role for role in roles.json()["roles"] if role["name"] == "Member")

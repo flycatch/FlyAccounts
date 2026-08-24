@@ -6,6 +6,12 @@ import { Sidebar } from "./Sidebar";
 import "./AppShell.css";
 
 function titleForPath(pathname: string): string {
+  if (pathname.startsWith("/proformas/new")) {
+    return "New Proforma";
+  }
+  if (pathname.startsWith("/proformas")) {
+    return "Proformas";
+  }
   if (pathname.startsWith("/contracts/new") || pathname.includes("/setup/")) {
     return "New Contract";
   }
@@ -39,6 +45,7 @@ type AppShellProps = {
   canClients: boolean;
   canResources: boolean;
   canContracts: boolean;
+  canProformas: boolean;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
   children: ReactNode;
@@ -53,6 +60,7 @@ export function AppShell({
   canClients,
   canResources,
   canContracts,
+  canProformas,
   onNavigate,
   onSignOut,
   children,
@@ -84,6 +92,7 @@ export function AppShell({
         canClients={canClients}
         canResources={canResources}
         canContracts={canContracts}
+        canProformas={canProformas}
         open={open}
         onNavigate={navigate}
         onSignOut={onSignOut}
